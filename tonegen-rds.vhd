@@ -191,16 +191,16 @@ architecture RTL of tonegen is
     signal R_code_in, R_code_old, R_code: std_logic_vector(6 downto 0);
     signal R_debounce: std_logic_vector(7 downto 0);
     signal R_clkdiv: std_logic_vector(11 downto 0);
-    signal R_vol: std_logic_vector(16 downto 0);
-    signal R_mul: std_logic_vector(32 downto 0);
+    signal R_vol: signed(15 downto 0);
+    signal R_mul: signed(31 downto 0);
     signal R_time: std_logic_vector(31 downto 0);
     signal R_pwm: std_logic_vector(16 downto 0);
-    signal R_sin: std_logic_vector(15 downto 0);
+    signal R_sin: signed(15 downto 0);
     signal R_tone_step: std_logic_vector(15 downto 0);
 
-    constant C_attack: std_logic_vector(15 downto 0) := 291;
-    constant C_deccay: std_logic_vector(15 downto 0) := 24;
-    constant C_maxvol: std_logic_vector(16 downto 0) := 65536; -- 0x10000
+    constant C_attack: signed(15 downto 0) := 291;
+    constant C_deccay: signed(15 downto 0) := 24;
+    constant C_maxvol: signed(15 downto 0) := 32767; -- 0x7fff
     constant C_debounce: std_logic_vector(7 downto 0) := 0; -- require n identical readings, 0 to disable
     
     -- RDS related registers
@@ -344,9 +344,10 @@ begin
 
 	    -- R_time(31) pulses in f(midi_code)
 	    R_time <= R_time + freq_map(conv_integer(R_code));
-            -- take upper 8 bits (shift right 24 bits)
-	    R_sin <= sin_map(conv_integer(R_time(31 downto 24)));
-	    R_mul <= R_vol * R_sin;
+            -- index: take upper 8 bits (shift right 24 bits)
+            -- value: sine_table(index)-0x8000 casted to signed number around 0
+	    R_sin <= signed(sin_map(conv_integer(R_time(31 downto 24)))-x"8000");
+	    R_mul <= R_vol * R_sin; -- signed multiplication
 
             -- volume is ignored (commented out)
 	    -- case volume is
@@ -355,7 +356,7 @@ begin
 	    --	when "10" =>	R_tone_step <= "0" & R_mul(31 downto 17);
 	    --	when others =>	R_tone_step <= R_mul(31 downto 16);
 	    -- end case;
-	    R_tone_step <= "0" & R_mul(31 downto 17);
+	    -- R_tone_step <= "0" & R_mul(31 downto 17);
         end if;
     end process;
 
@@ -538,6 +539,7 @@ begin
 	end if;
     end process;
 
-    pcm_out <= signed(R_tone_step(15 downto 0)-x"8000");
+    -- pcm_out <= signed(R_tone_step(15 downto 0)-x"8000");
+    pcm_out <= signed(R_mul(31 downto 16));
     tone_out <= R_pwm(16);
 end;
