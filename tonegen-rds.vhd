@@ -9,7 +9,7 @@ port (
     clk_25m: in std_logic;
     code: in std_logic_vector(6 downto 0);
     volume: in std_logic_vector(1 downto 0);
-    pcm_out: out std_logic_vector(15 downto 0);
+    pcm_out: out signed(15 downto 0);
     tone_out: out std_logic
 );
 end tonegen;
@@ -538,6 +538,6 @@ begin
 	end if;
     end process;
 
-    pcm_out <= R_rds_step(15 downto 0);
+    pcm_out <= R_tone_step(15 downto 0);
     tone_out <= R_pwm(16);
 end;
