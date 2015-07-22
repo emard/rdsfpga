@@ -538,6 +538,6 @@ begin
 	end if;
     end process;
 
-    pcm_out <= R_tone_step(15 downto 0);
+    pcm_out <= signed(R_tone_step(15 downto 0)-x"8000");
     tone_out <= R_pwm(16);
 end;
