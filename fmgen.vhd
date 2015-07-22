@@ -64,7 +64,7 @@ begin
 
 	    R_clk_div := R_clk_div + 1;
 	    if R_clk_div = x"0" then
-		if R_pcm > R_pcm_avg then
+		if (R_pcm - R_pcm_avg) > 0 then
 		    R_pcm_avg <= R_pcm_avg + 1;
 		-- elsif R_pcm < R_pcm_avg then
 		else
