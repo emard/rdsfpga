@@ -6,6 +6,7 @@ use ieee.numeric_std.all;
 
 entity fmgen is
 generic (
+	C_use_pcm_in: boolean := true;
 	C_fm_acclen: integer := 28;
 	C_fdds: real := 250000000.0
 );
@@ -14,6 +15,7 @@ port (
 	clk_250m: in std_logic;
 	-- cw_freq: in std_logic_vector(31 downto 0);
 	pwm_in: in std_logic;
+	pcm_in: in std_logic_vector(15 downto 0);
 	fm_out: out std_logic
 );
 end fmgen;
@@ -40,6 +42,11 @@ begin
     --
     -- PWM -> PCM
     --
+
+    copy_pcm_input: if C_use_pcm_in generate
+      R_pcm <= pcm_in;
+    end generate;
+
     process(clk_25m)
     variable delta: std_logic_vector(15 downto 0);
     variable R_clk_div: std_logic_vector(3 downto 0);
@@ -47,10 +54,12 @@ begin
         delta := x"ffff" - R_pcm;
 
         if rising_edge(clk_25m) then
+            convert_pwm_to_pcm: if not C_use_pcm_in then
             if pwm_in = '1' then
                 R_pcm <= R_pcm + (x"00" & delta(15 downto 8));
             else
                 R_pcm <= R_pcm - (x"00" & R_pcm(15 downto 8));
+            end if;
             end if;
 
 	    R_clk_div := R_clk_div + 1;

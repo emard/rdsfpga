@@ -50,11 +50,13 @@ module main(
   
   /* convert midi code to PWM tone output */
   wire tone_out_pwm;
+  wire [15:0] tone_out_pcm;
   tonegen midi2tone(
     .clk_25m(clk_25MHz),
     .code(midi),
     .volume(2'd2),
-    .tone_out(tone_out_pwm)
+    .tone_out(tone_out_pwm),
+    .pcm_out(tone_out_pcm)
   );
   assign p_tip[0] = tone_out_pwm;
   assign p_tip[1] = tone_out_pwm;
@@ -75,6 +77,7 @@ module main(
     .clk_25m(clk_25MHz),
     .clk_250m(clk_250MHz),
     .pwm_in(tone_out_pwm),
+    .pcm_in(tone_out_pcm),
     .fm_out(antenna)
   );
   
