@@ -408,10 +408,12 @@ begin
                     -- negative wave (128 - y) (64 is 0-point)
                     R_pilot_wav <= signed(x"40" - dbpsk_wav_map(conv_integer(V_pilot_wav_index)));
                   end if;
-                  -- pilot must be 9x weaker than 57kHz subcarrier
-                  -- if multiplied by 127 it would have equal amplitude as subcarrier
-                  -- 9x weaker: 127/9 = 14
-                  R_pilot_pcm <= R_pilot_wav * 14;
+                  -- ?? pilot must be 9x weaker than 57kHz subcarrier
+                  -- if multiplied by 64 it would have equal amplitude as subcarrier
+                  R_pilot_pcm <= R_pilot_wav * 64;
+                  -- 9x weaker: 64/9 = 7 (can use 8 approx)
+                  -- i'm not sure about this relation
+                  -- R_pilot_pcm <= R_pilot_wav * 8;
 	        else
 	          R_pilot_cdiv <= R_pilot_cdiv + 1;  
 	        end if;
