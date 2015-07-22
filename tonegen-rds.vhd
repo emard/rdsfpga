@@ -266,7 +266,7 @@ x"5e",x"62",x"67",x"6d",x"73",x"79",x"7d",x"7f",x"7f",x"7d",x"78",x"71",x"68",x"
 x"3a",x"2e",x"22",x"18",x"0f",x"08",x"03",x"01",x"01",x"03",x"08",x"0f",x"18",x"22",x"2e",x"3a"
     );
     signal R_rds_cdiv: std_logic_vector(5 downto 0); -- 6-bit divisor 0..47
-    signal R_rds_pcm: signed(15 downto 0); -- 16 bit ADC value for RDS waveform
+    signal R_rds_pcm: signed(7 downto 0); -- 8 bit ADC value for RDS waveform
     signal R_rds_msg_index: std_logic_vector(15 downto 0); -- 16 bit index for message
     signal R_rds_byte: std_logic_vector(7 downto 0); -- current byte to send
     signal R_rds_bit_index: std_logic_vector(2 downto 0); -- current bit index 0..7
@@ -274,7 +274,7 @@ x"3a",x"2e",x"22",x"18",x"0f",x"08",x"03",x"01",x"01",x"03",x"08",x"0f",x"18",x"
     signal R_rds_phase: std_logic; -- current phase 0:(+) 1:(-)
     signal R_rds_counter: std_logic_vector(4 downto 0); -- 5-bit wav counter 0..31
     signal R_rds_t_ps: std_logic_vector(30 downto 0); -- RDS timer in picoseconds (20 bit max range 1e6 ps)
-    signal R_rds_mul: signed(31 downto 0);
+    signal R_rds_mul: signed(15 downto 0);
     signal R_rds_mod_pcm: signed(15 downto 0);
 
     signal R_pilot_counter: std_logic_vector(4 downto 0) := (others => '0'); -- 5-bit wav counter 0..31
@@ -282,7 +282,7 @@ x"3a",x"2e",x"22",x"18",x"0f",x"08",x"03",x"01",x"01",x"03",x"08",x"0f",x"18",x"
     signal R_pilot_pcm: std_logic_vector(15 downto 0); -- 16 bit ADC value for 19kHz pilot sine wave
 
     signal R_subc_counter: std_logic_vector(4 downto 0) := (others => '0'); -- 5-bit wav counter 0..31
-    signal R_subc_pcm: signed(15 downto 0); -- 16 bit ADC value for 19kHz pilot sine wave
+    signal R_subc_pcm: signed(7 downto 0); -- 8 bit ADC value for 19kHz pilot sine wave
     
     constant C_rds_clock_in_period: std_logic_vector(30 downto 0) := 40000; -- 40 ns = 40000 ps = 25 MHz
     -- constant C_rds_clock_in_period: std_logic_vector(19 downto 0) := 1000; -- slow cca 1kHz
@@ -433,10 +433,10 @@ begin
                   -- dbpsk_wav_map has range 1..127
                   if V_subc_sign = '0' then
                     -- positive wave (y)
-                    R_subc_pcm <= signed( (dbpsk_wav_map(conv_integer(V_subc_wav_index)) - x"40" ) & x"00");
+                    R_subc_pcm <= signed( (dbpsk_wav_map(conv_integer(V_subc_wav_index)) - x"40" ) );
                   else
                     -- negative wave (128 - y) (64 is 0-point)
-                    R_subc_pcm <= signed( (x"40" - dbpsk_wav_map(conv_integer(V_subc_wav_index))) & x"00");
+                    R_subc_pcm <= signed( (x"40" - dbpsk_wav_map(conv_integer(V_subc_wav_index))) );
                   end if;
 	    end if;
 	end if;
@@ -504,20 +504,19 @@ begin
                 -- dbpsk_wav_map has range 1..127
                 if V_rds_sign = '0' then
                   -- positive wave (y)
-                  R_rds_pcm <= signed( dbpsk_wav_map(conv_integer(V_dbpsk_wav_index)) - x"40") & x"00";
+                  R_rds_pcm <= signed(dbpsk_wav_map(conv_integer(V_dbpsk_wav_index)) - x"40");
                 else
                   -- negative wave (128 - y) (64 is 0-point)
-                  -- R_rds_pcm <= (x"80" - dbpsk_wav_map(conv_integer(V_dbpsk_wav_index))) & x"00";
-                  R_rds_pcm <= signed( (x"40" - dbpsk_wav_map(conv_integer(V_dbpsk_wav_index)))) & x"00";
+                  R_rds_pcm <= signed(x"40" - dbpsk_wav_map(conv_integer(V_dbpsk_wav_index)));
                 end if;
               else
                 R_rds_cdiv <= R_rds_cdiv + 1;
               end if;
-              R_rds_mul <= R_subc_pcm * R_rds_pcm;
+              -- R_rds_mul <= R_subc_pcm * R_rds_pcm;
               -- R_rds_mul <= R_pilot_pcm * R_rds_pcm;
               -- R_rds_mul <= R_subc_pcm * x"7F00";
-              -- R_rds_mul <= R_rds_pcm * x"7F00";
-              R_rds_mod_pcm <= R_rds_mul(30 downto 15);
+              R_rds_mul <= R_rds_pcm * x"7F";
+              R_rds_mod_pcm <= R_rds_mul;
 	    end if;
 	end if;
     end process;
@@ -539,7 +538,7 @@ begin
 	end if;
     end process;
 
-    -- pcm_out <= signed(R_tone_pcm(15 downto 0)-x"8000");
-    pcm_out <= R_tone_pcm + R_rds_pcm;
+    -- pcm_out <= R_tone_pcm + signed(R_rds_pcm & x"00");
+    pcm_out <= R_tone_pcm + R_rds_mul;
     tone_out <= R_pwm(16);
 end;
