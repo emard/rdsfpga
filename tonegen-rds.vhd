@@ -433,10 +433,10 @@ begin
                   -- dbpsk_wav_map has range 1..127
                   if V_subc_sign = '0' then
                     -- positive wave (y)
-                    R_subc_pcm <= signed( (dbpsk_wav_map(conv_integer(V_subc_wav_index)) - x"40" ) );
+                    R_subc_pcm <= signed(dbpsk_wav_map(conv_integer(V_subc_wav_index)) - x"40");
                   else
                     -- negative wave (128 - y) (64 is 0-point)
-                    R_subc_pcm <= signed( (x"40" - dbpsk_wav_map(conv_integer(V_subc_wav_index))) );
+                    R_subc_pcm <= signed(x"40" - dbpsk_wav_map(conv_integer(V_subc_wav_index)));
                   end if;
 	    end if;
 	end if;
