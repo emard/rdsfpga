@@ -205,9 +205,9 @@ architecture RTL of tonegen is
     
     -- RDS related registers
     -- rds message converted from pic assember to stream of bytes
-    constant zC_rds_msg_len: std_logic_vector(15 downto 0) := 260;
-    type zrds_msg_type is array(0 to 259) of std_logic_vector(7 downto 0);
-    constant zrds_msg_map: zrds_msg_type := (
+    constant C_rds_msg_len: std_logic_vector(15 downto 0) := 260;
+    type rds_msg_type is array(0 to 259) of std_logic_vector(7 downto 0);
+    constant rds_msg_map: rds_msg_type := (
 x"c0",x"00",x"9b",x"02",x"03",x"29",x"fc",x"00",x"07",x"01",x"49",x"86",x"a9",
 x"c0",x"00",x"9b",x"02",x"02",x"47",x"bc",x"00",x"07",x"01",x"91",x"a7",x"c6",
 x"c0",x"00",x"9b",x"02",x"02",x"ab",x"0c",x"00",x"07",x"01",x"bc",x"d3",x"94",
@@ -244,9 +244,9 @@ x"c0",x"00",x"9b",x"08",x"03",x"ca",x"22",x"02",x"08",x"e0",x"80",x"80",x"dc"
       x"ff"
     );
     -- testing 8 bits
-    constant C_rds_msg_len: std_logic_vector(15 downto 0) := 9;
-    type rds_msg_type is array(0 to 8) of std_logic_vector(7 downto 0);
-    constant rds_msg_map: rds_msg_type := (
+    constant yC_rds_msg_len: std_logic_vector(15 downto 0) := 9;
+    type yrds_msg_type is array(0 to 8) of std_logic_vector(7 downto 0);
+    constant yrds_msg_map: yrds_msg_type := (
       x"00",
       x"00",
       x"00",
@@ -466,7 +466,7 @@ begin
                   -- fetch new bit
                   -- R_rds_bit <= rds_msg_map(conv_integer(R_rds_msg_index))(conv_integer(R_rds_bit_index));
                   -- R_rds_bit <= not(R_rds_bit);
-                  -- R_rds_bit <= '0'; -- test: bit 0 should output 57 kHz
+                  -- R_rds_bit <= '0'; -- test: bit 0 should output 1187.5 kHz
                   -- change phase if bit was 1
                   R_rds_phase <= R_rds_phase xor R_rds_bit; -- change the phase
                   -- take next bit
@@ -512,19 +512,20 @@ begin
               else
                 R_rds_cdiv <= R_rds_cdiv + 1;
               end if;
-              -- R_rds_mul <= R_subc_pcm * R_rds_pcm;
+              R_rds_mul <= R_subc_pcm * R_rds_pcm;
               -- R_rds_mul <= R_pilot_pcm * R_rds_pcm;
               -- R_rds_mul <= R_subc_pcm * x"7F00";
-              R_rds_mul <= R_rds_pcm * x"7F";
+              -- R_rds_mul <= R_rds_pcm * x"7F";
               R_rds_mod_pcm <= R_rds_mul;
 	    end if;
 	end if;
     end process;
     -- ************************** END RDS MODULATOR 1187.5 Hz ******************************
 
-    process(clk_25m)
-    begin
-        if rising_edge(clk_25m) then
+    -- pwm mixing stage
+    --process(clk_25m)
+    --begin
+    --    if rising_edge(clk_25m) then
             -- final mixing stage tone+rds output to PWM
 	    --R_pwm <= R_pwm + (R_pwm(16) & (
 	    --         (R_tone_pcm(15 downto 0))
@@ -535,10 +536,10 @@ begin
             --         ));
 	    -- R_pwm <= R_pwm + (R_pwm(16) & (R_rds_pcm + R_pilot_pcm));
 	    -- R_pwm <= R_pwm + (R_pwm(16) & (R_pilot_pcm));
-	end if;
-    end process;
+    --	end if;
+    --end process;
+    -- tone_out <= R_pwm(16);
 
-    -- pcm_out <= R_tone_pcm + signed(R_rds_pcm & x"00");
-    pcm_out <= R_tone_pcm + R_rds_mul;
-    tone_out <= R_pwm(16);
+    -- pcm_out <= R_tone_pcm + R_rds_mul; -- audible rds modulation at 1187.5 Hz
+    pcm_out <= R_tone_pcm + R_rds_mod_pcm;
 end;
