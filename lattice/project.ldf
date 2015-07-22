@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<BaliProject version="3.0" title="project" device="LFXP2-8E-5TN144C" default_implementation="project">
+    <Options/>
+    <Implementation title="project" dir="project" description="project" synthesis="synplify" default_strategy="Strategy1">
+        <Source name="ulx2s.lpf" type="Logic Preference" type_short="LPF">
+            <Options/>
+        </Source>
+        <Options def_top="main"/>
+        <Source name="enkoder.vhd" type="VHDL" type_short="VHDL"><Options/></Source>
+        <Source name="fmgen.vhd" type="VHDL" type_short="VHDL"><Options/></Source>
+        <Source name="lattice_pll_25MHz_250MHz.vhd" type="VHDL" type_short="VHDL"><Options/></Source>
+        <Source name="tonegen-rds.vhd" type="VHDL" type_short="VHDL"><Options/></Source>
+        <Source name="main.v" type="Verilog" type_short="Verilog"><Options top_module="main"/></Source>
+    </Implementation>
+    <Strategy name="Strategy1" file="project1.sty"/>
+</BaliProject>

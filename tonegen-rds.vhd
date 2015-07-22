@@ -1,0 +1,541 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_arith.all;
+use ieee.std_logic_unsigned.all;
+use ieee.numeric_std.all;
+
+entity tonegen is
+port (
+    clk_25m: in std_logic;
+    code: in std_logic_vector(6 downto 0);
+    volume: in std_logic_vector(1 downto 0);
+    tone_out: out std_logic
+);
+end tonegen;
+
+architecture RTL of tonegen is
+    type freq_rom_type is array(0 to 127) of std_logic_vector(31 downto 0);
+    constant freq_map: freq_rom_type := (
+	x"00000000", -- c  0.00 Hz (MIDI #0)
+	x"000005d0", -- c# 8.66 Hz (MIDI #1)
+	x"00000628", -- d  9.18 Hz (MIDI #2)
+	x"00000686", -- d# 9.72 Hz (MIDI #3)
+	x"000006e9", -- e  10.30 Hz (MIDI #4)
+	x"00000752", -- f  10.91 Hz (MIDI #5)
+	x"000007c2", -- f# 11.56 Hz (MIDI #6)
+	x"00000838", -- g  12.25 Hz (MIDI #7)
+	x"000008b5", -- g# 12.98 Hz (MIDI #8)
+	x"0000093a", -- a  13.75 Hz (MIDI #9)
+	x"000009c6", -- a# 14.57 Hz (MIDI #10)
+	x"00000a5b", -- h  15.43 Hz (MIDI #11)
+	x"00000af9", -- c  16.35 Hz (MIDI #12)
+	x"00000ba0", -- c# 17.32 Hz (MIDI #13)
+	x"00000c51", -- d  18.35 Hz (MIDI #14)
+	x"00000d0c", -- d# 19.45 Hz (MIDI #15)
+	x"00000dd3", -- e  20.60 Hz (MIDI #16)
+	x"00000ea5", -- f  21.83 Hz (MIDI #17)
+	x"00000f84", -- f# 23.12 Hz (MIDI #18)
+	x"00001071", -- g  24.50 Hz (MIDI #19)
+	x"0000116b", -- g# 25.96 Hz (MIDI #20)
+	x"00001274", -- a  27.50 Hz (MIDI #21)
+	x"0000138d", -- a# 29.14 Hz (MIDI #22)
+	x"000014b7", -- h  30.87 Hz (MIDI #23)
+	x"000015f2", -- c  32.70 Hz (MIDI #24)
+	x"00001740", -- c# 34.65 Hz (MIDI #25)
+	x"000018a2", -- d  36.71 Hz (MIDI #26)
+	x"00001a19", -- d# 38.89 Hz (MIDI #27)
+	x"00001ba6", -- e  41.20 Hz (MIDI #28)
+	x"00001d4b", -- f  43.65 Hz (MIDI #29)
+	x"00001f09", -- f# 46.25 Hz (MIDI #30)
+	x"000020e2", -- g  49.00 Hz (MIDI #31)
+	x"000022d6", -- g# 51.91 Hz (MIDI #32)
+	x"000024e8", -- a  55.00 Hz (MIDI #33)
+	x"0000271a", -- a# 58.27 Hz (MIDI #34)
+	x"0000296e", -- h  61.74 Hz (MIDI #35)
+	x"00002be4", -- c  65.41 Hz (MIDI #36)
+	x"00002e80", -- c# 69.30 Hz (MIDI #37)
+	x"00003144", -- d  73.42 Hz (MIDI #38)
+	x"00003432", -- d# 77.78 Hz (MIDI #39)
+	x"0000374d", -- e  82.41 Hz (MIDI #40)
+	x"00003a97", -- f  87.31 Hz (MIDI #41)
+	x"00003e13", -- f# 92.50 Hz (MIDI #42)
+	x"000041c4", -- g  98.00 Hz (MIDI #43)
+	x"000045ad", -- g# 103.83 Hz (MIDI #44)
+	x"000049d1", -- a  110.00 Hz (MIDI #45)
+	x"00004e35", -- a# 116.54 Hz (MIDI #46)
+	x"000052dc", -- h  123.47 Hz (MIDI #47)
+	x"000057c9", -- c  130.81 Hz (MIDI #48)
+	x"00005d01", -- c# 138.59 Hz (MIDI #49)
+	x"00006289", -- d  146.83 Hz (MIDI #50)
+	x"00006865", -- d# 155.56 Hz (MIDI #51)
+	x"00006e9a", -- e  164.81 Hz (MIDI #52)
+	x"0000752e", -- f  174.61 Hz (MIDI #53)
+	x"00007c26", -- f# 185.00 Hz (MIDI #54)
+	x"00008388", -- g  196.00 Hz (MIDI #55)
+	x"00008b5a", -- g# 207.65 Hz (MIDI #56)
+	x"000093a3", -- a  220.00 Hz (MIDI #57)
+	x"00009c6b", -- a# 233.08 Hz (MIDI #58)
+	x"0000a5b8", -- h  246.94 Hz (MIDI #59)
+	x"0000af92", -- c  261.63 Hz (MIDI #60)
+	x"0000ba03", -- c# 277.18 Hz (MIDI #61)
+	x"0000c513", -- d  293.66 Hz (MIDI #62)
+	x"0000d0cb", -- d# 311.13 Hz (MIDI #63)
+	x"0000dd35", -- e  329.63 Hz (MIDI #64)
+	x"0000ea5c", -- f  349.23 Hz (MIDI #65)
+	x"0000f84c", -- f# 369.99 Hz (MIDI #66)
+	x"00010710", -- g  392.00 Hz (MIDI #67)
+	x"000116b4", -- g# 415.30 Hz (MIDI #68)
+	x"00012747", -- a  440.00 Hz (MIDI #69)
+	x"000138d6", -- a# 466.16 Hz (MIDI #70)
+	x"00014b70", -- h  493.88 Hz (MIDI #71)
+	x"00015f25", -- c  523.25 Hz (MIDI #72)
+	x"00017407", -- c# 554.37 Hz (MIDI #73)
+	x"00018a26", -- d  587.33 Hz (MIDI #74)
+	x"0001a196", -- d# 622.25 Hz (MIDI #75)
+	x"0001ba6b", -- e  659.26 Hz (MIDI #76)
+	x"0001d4b9", -- f  698.46 Hz (MIDI #77)
+	x"0001f099", -- f# 739.99 Hz (MIDI #78)
+	x"00020e20", -- g  783.99 Hz (MIDI #79)
+	x"00022d69", -- g# 830.61 Hz (MIDI #80)
+	x"00024e8e", -- a  880.00 Hz (MIDI #81)
+	x"000271ac", -- a# 932.33 Hz (MIDI #82)
+	x"000296e1", -- h  987.77 Hz (MIDI #83)
+	x"0002be4b", -- c  1046.50 Hz (MIDI #84)
+	x"0002e80e", -- c# 1108.73 Hz (MIDI #85)
+	-- x"0003144c", -- d  1174.66 Hz (MIDI #86) 25e6/(2^32/0x3144c)Hz
+
+	-- x"00031ceb", -- 1187.5 25e6/(2^32/0x31ceb)Hz exact bitrate
+
+	x"00031cd0", -- 1187.3 25e6/(2^32/0x31ceb)Hz
+
+	x"0003432c", -- d# 1244.51 Hz (MIDI #87)
+	x"000374d6", -- e  1318.51 Hz (MIDI #88)
+	x"0003a973", -- f  1396.91 Hz (MIDI #89)
+	x"0003e132", -- f# 1479.98 Hz (MIDI #90)
+	x"00041c41", -- g  1567.98 Hz (MIDI #91)
+	x"00045ad3", -- g# 1661.22 Hz (MIDI #92)
+	x"00049d1d", -- a  1760.00 Hz (MIDI #93)
+	x"0004e359", -- a# 1864.66 Hz (MIDI #94)
+	x"00052dc2", -- h  1975.53 Hz (MIDI #95)
+	x"00057c97", -- c  2093.00 Hz (MIDI #96)
+	x"0005d01c", -- c# 2217.46 Hz (MIDI #97)
+	x"00062899", -- d  2349.32 Hz (MIDI #98)
+	x"00068659", -- d# 2489.02 Hz (MIDI #99)
+	x"0006e9ac", -- e  2637.02 Hz (MIDI #100)
+	x"000752e7", -- f  2793.83 Hz (MIDI #101)
+	x"0007c264", -- f# 2959.96 Hz (MIDI #102)
+	x"00083882", -- g  3135.96 Hz (MIDI #103)
+	x"0008b5a6", -- g# 3322.44 Hz (MIDI #104)
+	x"00093a3b", -- a  3520.00 Hz (MIDI #105)
+	x"0009c6b2", -- a# 3729.31 Hz (MIDI #106)
+	x"000a5b84", -- h  3951.07 Hz (MIDI #107)
+	x"000af92e", -- c  4186.01 Hz (MIDI #108)
+	x"000ba039", -- c# 4434.92 Hz (MIDI #109)
+	x"000c5133", -- d  4698.64 Hz (MIDI #110)
+	x"000d0cb3", -- d# 4978.03 Hz (MIDI #111)
+	x"000dd359", -- e  5274.04 Hz (MIDI #112)
+	x"000ea5cf", -- f  5587.65 Hz (MIDI #113)
+	x"000f84c8", -- f# 5919.91 Hz (MIDI #114)
+	x"00107104", -- g  6271.93 Hz (MIDI #115)
+	x"00116b4c", -- g# 6644.88 Hz (MIDI #116)
+	x"00127476", -- a  7040.00 Hz (MIDI #117)
+	x"00138d65", -- a# 7458.62 Hz (MIDI #118)
+	x"0014b708", -- h  7902.13 Hz (MIDI #119)
+	x"0015f25d", -- c  8372.02 Hz (MIDI #120)
+	x"00174073", -- c# 8869.84 Hz (MIDI #121)
+	x"0018a267", -- d  9397.27 Hz (MIDI #122)
+	x"001a1966", -- d# 9956.06 Hz (MIDI #123)
+	x"001ba6b2", -- e  10548.08 Hz (MIDI #124)
+	x"001d4b9e", -- f  11175.30 Hz (MIDI #125)
+	x"001f0991", -- f# 11839.82 Hz (MIDI #126)
+	x"0020e209"  -- g  12543.85 Hz (MIDI #127)
+    );
+
+    type sin_rom_type is array(0 to 255) of std_logic_vector(15 downto 0);
+    constant sin_map: sin_rom_type := (
+	x"8000",x"8324",x"8647",x"896a",x"8c8b",x"8fab",x"92c8",x"95e2",
+	x"98f8",x"9c0b",x"9f19",x"a223",x"a527",x"a826",x"ab1f",x"ae10",
+	x"b0fb",x"b3de",x"b6ba",x"b98c",x"bc56",x"bf17",x"c1ce",x"c47a",
+	x"c71c",x"c9b3",x"cc3f",x"cebf",x"d133",x"d39b",x"d5f5",x"d842",
+	x"da82",x"dcb3",x"ded7",x"e0ec",x"e2f1",x"e4e8",x"e6cf",x"e8a6",
+	x"ea6d",x"ec24",x"edc9",x"ef5e",x"f0e2",x"f255",x"f3b5",x"f504",
+	x"f641",x"f76c",x"f884",x"f98a",x"fa7c",x"fb5c",x"fc29",x"fce3",
+	x"fd8a",x"fe1d",x"fe9d",x"ff09",x"ff62",x"ffa7",x"ffd8",x"fff6",
+	x"ffff",x"fff6",x"ffd8",x"ffa7",x"ff62",x"ff09",x"fe9d",x"fe1d",
+	x"fd8a",x"fce3",x"fc2a",x"fb5d",x"fa7d",x"f98a",x"f884",x"f76c",
+	x"f641",x"f505",x"f3b6",x"f255",x"f0e3",x"ef5f",x"edca",x"ec24",
+	x"ea6d",x"e8a6",x"e6cf",x"e4e8",x"e2f2",x"e0ec",x"ded7",x"dcb4",
+	x"da82",x"d843",x"d5f6",x"d39b",x"d134",x"cec0",x"cc40",x"c9b4",
+	x"c71d",x"c47b",x"c1ce",x"bf17",x"bc57",x"b98d",x"b6ba",x"b3df",
+	x"b0fc",x"ae11",x"ab1f",x"a827",x"a528",x"a224",x"9f1a",x"9c0c",
+	x"98f9",x"95e2",x"92c8",x"8fab",x"8c8c",x"896b",x"8648",x"8324",
+	x"8000",x"7cdc",x"79b8",x"7696",x"7374",x"7055",x"6d38",x"6a1e",
+	x"6708",x"63f5",x"60e6",x"5ddd",x"5ad8",x"57da",x"54e1",x"51ef",
+	x"4f05",x"4c21",x"4946",x"4673",x"43aa",x"40e9",x"3e32",x"3b85",
+	x"38e3",x"364c",x"33c0",x"3140",x"2ecc",x"2c65",x"2a0b",x"27bd",
+	x"257e",x"234c",x"2129",x"1f14",x"1d0e",x"1b18",x"1931",x"1759",
+	x"1592",x"13dc",x"1236",x"10a1",x"0f1d",x"0dab",x"0c4a",x"0afb",
+	x"09be",x"0894",x"077b",x"0676",x"0583",x"04a3",x"03d6",x"031c",
+	x"0275",x"01e2",x"0162",x"00f6",x"009d",x"0058",x"0027",x"0009",
+	x"0000",x"0009",x"0027",x"0058",x"009d",x"00f6",x"0162",x"01e2",
+	x"0275",x"031b",x"03d5",x"04a2",x"0582",x"0675",x"077b",x"0893",
+	x"09bd",x"0afa",x"0c49",x"0daa",x"0f1c",x"10a0",x"1235",x"13db",
+	x"1591",x"1758",x"192f",x"1b16",x"1d0d",x"1f12",x"2127",x"234a",
+	x"257c",x"27bc",x"2a09",x"2c63",x"2ecb",x"313f",x"33bf",x"364a",
+	x"38e1",x"3b84",x"3e30",x"40e7",x"43a8",x"4671",x"4944",x"4c1f",
+	x"4f02",x"51ed",x"54df",x"57d7",x"5ad6",x"5dda",x"60e4",x"63f3",
+	x"6705",x"6a1c",x"6d36",x"7053",x"7372",x"7693",x"79b6",x"7cda"
+    );
+
+    signal R_code_in, R_code_old, R_code: std_logic_vector(6 downto 0);
+    signal R_debounce: std_logic_vector(7 downto 0);
+    signal R_clkdiv: std_logic_vector(11 downto 0);
+    signal R_vol: std_logic_vector(16 downto 0);
+    signal R_mul: std_logic_vector(32 downto 0);
+    signal R_time: std_logic_vector(31 downto 0);
+    signal R_pwm: std_logic_vector(16 downto 0);
+    signal R_sin: std_logic_vector(15 downto 0);
+    signal R_tone_step: std_logic_vector(15 downto 0);
+
+    constant C_attack: std_logic_vector(15 downto 0) := 291;
+    constant C_deccay: std_logic_vector(15 downto 0) := 24;
+    constant C_maxvol: std_logic_vector(16 downto 0) := 65536; -- 0x10000
+    constant C_debounce: std_logic_vector(7 downto 0) := 0; -- require n identical readings, 0 to disable
+    
+    -- RDS related registers
+    -- rds message converted from pic assember to stream of bytes
+    constant C_rds_msg_len: std_logic_vector(15 downto 0) := 260;
+    type rds_msg_type is array(0 to 259) of std_logic_vector(7 downto 0);
+    constant rds_msg_map: rds_msg_type := (
+x"c0",x"00",x"9b",x"02",x"03",x"29",x"fc",x"00",x"07",x"01",x"49",x"86",x"a9",
+x"c0",x"00",x"9b",x"02",x"02",x"47",x"bc",x"00",x"07",x"01",x"91",x"a7",x"c6",
+x"c0",x"00",x"9b",x"02",x"02",x"ab",x"0c",x"00",x"07",x"01",x"bc",x"d3",x"94",
+x"c0",x"00",x"9b",x"02",x"02",x"f0",x"9c",x"00",x"07",x"00",x"80",x"80",x"dc",
+x"c0",x"00",x"9b",x"08",x"00",x"23",x"74",x"84",x"50",x"f5",x"31",x"33",x"13",
+x"c0",x"00",x"9b",x"08",x"00",x"78",x"e4",x"f2",x"08",x"f4",x"80",x"80",x"dc",
+x"c0",x"00",x"9b",x"08",x"00",x"94",x"52",x"02",x"08",x"e0",x"80",x"80",x"dc",
+x"c0",x"00",x"9b",x"08",x"00",x"cf",x"c2",x"02",x"08",x"e0",x"80",x"80",x"dc",
+x"c0",x"00",x"9b",x"08",x"01",x"16",x"a2",x"02",x"08",x"e0",x"80",x"80",x"dc",
+x"c0",x"00",x"9b",x"08",x"01",x"4d",x"32",x"02",x"08",x"e0",x"80",x"80",x"dc",
+x"c0",x"00",x"9b",x"08",x"01",x"a1",x"82",x"02",x"08",x"e0",x"80",x"80",x"dc",
+x"c0",x"00",x"9b",x"08",x"01",x"fa",x"12",x"02",x"08",x"e0",x"80",x"80",x"dc",
+x"c0",x"00",x"9b",x"08",x"02",x"13",x"42",x"02",x"08",x"e0",x"80",x"80",x"dc",
+x"c0",x"00",x"9b",x"08",x"02",x"48",x"d2",x"02",x"08",x"e0",x"80",x"80",x"dc",
+x"c0",x"00",x"9b",x"08",x"02",x"a4",x"62",x"02",x"08",x"e0",x"80",x"80",x"dc",
+x"c0",x"00",x"9b",x"08",x"02",x"ff",x"f2",x"02",x"08",x"e0",x"80",x"80",x"dc",
+x"c0",x"00",x"9b",x"08",x"03",x"26",x"92",x"02",x"08",x"e0",x"80",x"80",x"dc",
+x"c0",x"00",x"9b",x"08",x"03",x"7d",x"02",x"02",x"08",x"e0",x"80",x"80",x"dc",
+x"c0",x"00",x"9b",x"08",x"03",x"91",x"b2",x"02",x"08",x"e0",x"80",x"80",x"dc",
+x"c0",x"00",x"9b",x"08",x"03",x"ca",x"22",x"02",x"08",x"e0",x"80",x"80",x"dc"
+    );
+    -- testing 8 bits
+    constant xC_rds_msg_len: std_logic_vector(15 downto 0) := 9;
+    type xrds_msg_type is array(0 to 8) of std_logic_vector(7 downto 0);
+    constant xrds_msg_map: xrds_msg_type := (
+      x"00",
+      x"01",
+      x"03",
+      x"07",
+      x"0f",
+      x"1f",
+      x"3f",
+      x"7f",
+      x"ff"
+    );
+    -- testing 8 bits
+    constant yC_rds_msg_len: std_logic_vector(15 downto 0) := 9;
+    type yrds_msg_type is array(0 to 8) of std_logic_vector(7 downto 0);
+    constant yrds_msg_map: yrds_msg_type := (
+      x"00",
+      x"00",
+      x"00",
+      x"00",
+      x"00",
+      x"00",
+      x"00",
+      x"00",
+      x"00"
+    );
+    -- dbpsk waveform
+    constant C_dbpsk_wav_len: std_logic_vector(7 downto 0) := 48;
+    type dbpsk_wav_type is array(0 to 47) of std_logic_vector(7 downto 0);
+    constant dbpsk_wav_map: dbpsk_wav_type := (
+x"47",x"53",x"5e",x"67",x"6e",x"73",x"75",x"75",x"73",x"6f",x"6a",x"66",x"61",x"5e",x"5c",x"5c",
+x"5e",x"62",x"67",x"6d",x"73",x"79",x"7d",x"7f",x"7f",x"7d",x"78",x"71",x"68",x"5e",x"52",x"46",
+x"3a",x"2e",x"22",x"18",x"0f",x"08",x"03",x"01",x"01",x"03",x"08",x"0f",x"18",x"22",x"2e",x"3a"
+    );
+    signal R_rds_cdiv: std_logic_vector(5 downto 0); -- 6-bit divisor 0..47
+    signal R_rds_step: std_logic_vector(15 downto 0); -- 16 bit ADC value for RDS waveform
+    signal R_rds_msg_index: std_logic_vector(15 downto 0); -- 16 bit index for message
+    signal R_rds_byte: std_logic_vector(7 downto 0); -- current byte to send
+    signal R_rds_bit_index: std_logic_vector(2 downto 0); -- current bit index 0..7
+    signal R_rds_bit: std_logic; -- current bit to send
+    signal R_rds_phase: std_logic; -- current phase 0:(+) 1:(-)
+    signal R_rds_counter: std_logic_vector(4 downto 0); -- 5-bit wav counter 0..31
+    signal R_rds_t_ps: std_logic_vector(30 downto 0); -- RDS timer in picoseconds (20 bit max range 1e6 ps)
+    signal R_rds_mul: std_logic_vector(31 downto 0);
+    signal R_rds_mod_step: std_logic_vector(15 downto 0);
+
+    signal R_pilot_counter: std_logic_vector(4 downto 0) := (others => '0'); -- 5-bit wav counter 0..31
+    signal R_pilot_cdiv: std_logic_vector(1 downto 0); -- 2-bit divisor 0..2
+    signal R_pilot_step: std_logic_vector(15 downto 0); -- 16 bit ADC value for 19kHz pilot sine wave
+
+    signal R_subc_counter: std_logic_vector(4 downto 0) := (others => '0'); -- 5-bit wav counter 0..31
+    signal R_subc_step: std_logic_vector(15 downto 0); -- 16 bit ADC value for 19kHz pilot sine wave
+    
+    constant C_rds_clock_in_period: std_logic_vector(30 downto 0) := 40000; -- 40 ns = 40000 ps = 25 MHz
+    -- constant C_rds_clock_in_period: std_logic_vector(19 downto 0) := 1000; -- slow cca 1kHz
+    -- constant C_rds_clock_out_period: std_logic_vector(19 downto 0) := 377000; -- ?? experimentally determined 57 kHz
+    constant C_rds_clock_out_period: std_logic_vector(19 downto 0) := 548245; -- 548245 ps = 1.824 MHz -> 57 kHz
+    -- constant C_rds_clock_out_period: std_logic_vector(30 downto 0) := 5482450; -- 5482450 ps = 182.4 kHz -> 5.7 kHz
+    -- constant C_rds_clock_out_period: std_logic_vector(30 downto 0) := 54824500; -- 54824500 ps = 18.24 kHz -> 570 Hz
+    signal R_rds_strobe: std_logic; -- 1.824 MHz strobe signal
+begin
+
+    -- play tone on keyboard
+    process(clk_25m)
+    --variable V_dbpsk_wav_index: std_logic_vector(5 downto 0); -- 6-bit index 0..63
+    --variable V_rds_sign: std_logic; -- current sign of waveform 0:(+) 1:(-)
+    --variable V_pilot_wav_index: std_logic_vector(5 downto 0); -- 6-bit index 0..63
+    --variable V_pilot_sign: std_logic; -- current sign of waveform 0:(+) 1:(-)
+    begin
+	if rising_edge(clk_25m) then
+	    R_clkdiv <= R_clkdiv + 1; -- R_clkdiv size 12 bit (0-4095)
+	    if R_clkdiv = x"000" then
+		R_code_in <= code;
+                -- simple debounce: check if code is still the same
+                if R_code_in = R_code_old then
+                    -- code is still the same
+                    -- to be accepted, new code reading must be the same C_debounce times
+                    if R_debounce >= C_debounce then
+		        if R_code_in /= "0000000" then
+		            -- code is persistent and non-zero
+                            -- accept new code if it is different than current code
+                            if R_code /= R_code_in then
+                                R_code <= R_code_in;
+                                R_debounce <= 0;
+                            else
+                                -- incr volume until saturation
+                                if R_vol <= C_maxvol - C_attack then
+                                    R_vol <= R_vol + C_attack;
+                                else
+                                    R_vol <= C_maxvol;
+                                end if;
+                            end if;
+                        else
+                            -- code is persistent and zero
+                            -- decr volume until mute
+                            if R_vol >= C_deccay then
+			        R_vol <= R_vol - C_deccay;
+                            else
+			        R_vol <= 0;
+                            end if;
+                        end if;
+                    else
+                        R_debounce <= R_debounce + 1;
+                    end if;
+                else
+                    -- different code
+                    R_code_old <= R_code_in; -- debounce register
+                    R_debounce <= 0;
+                end if;
+	    end if;
+
+	    -- R_time(31) pulses in f(midi_code)
+	    R_time <= R_time + freq_map(conv_integer(R_code));
+            -- take upper 8 bits (shift right 24 bits)
+	    R_sin <= sin_map(conv_integer(R_time(31 downto 24)));
+	    R_mul <= R_vol * R_sin;
+
+            -- volume is ignored (commented out)
+	    -- case volume is
+	    --	when "00" =>	R_tone_step <= "000" & R_mul(31 downto 19);
+	    --	when "01" =>	R_tone_step <= "00" & R_mul(31 downto 18);
+	    --	when "10" =>	R_tone_step <= "0" & R_mul(31 downto 17);
+	    --	when others =>	R_tone_step <= R_mul(31 downto 16);
+	    -- end case;
+	    R_tone_step <= "0" & R_mul(31 downto 17);
+        end if;
+    end process;
+
+    -- generate 1.824 MHz RDS strobe
+    -- RDS needs 57 kHz carrier wave.
+    -- lookup table period length is 32 entries
+    -- so we need strobe frequency of 32*57 kHz = 1.824 MHz
+    -- or period of 548245 ps
+    process(clk_25m)
+    begin
+      if rising_edge(clk_25m) then
+        if R_rds_t_ps > C_rds_clock_out_period  then
+          -- step back one out-period and add 40ns (1/25MHz)
+          R_rds_t_ps <= R_rds_t_ps - C_rds_clock_out_period + C_rds_clock_in_period;
+          R_rds_strobe <= '1';
+        else
+          R_rds_t_ps <= R_rds_t_ps + C_rds_clock_in_period; -- add 40ns (1/25MHz)
+          R_rds_strobe <= '0';
+        end if;
+      end if;
+    end process;
+
+    -- ****************** PILOT 19kHz (only for stereo, not used for mono) *******************
+    process(clk_25m)
+    variable V_pilot_wav_index: std_logic_vector(5 downto 0); -- 6-bit index 0..63
+    variable V_pilot_sign: std_logic; -- current sign of waveform 0:(+) 1:(-)
+    begin
+        if rising_edge(clk_25m) then
+            -- clocked at 25 MHz
+            -- strobed at 1.824 MHz
+	    if R_rds_strobe = '1' then
+	        -- pilot 57/3 = 19 kHz generation
+	        if R_pilot_cdiv = 2 then
+	          R_pilot_cdiv <= 0;
+	          R_pilot_counter <= R_pilot_counter + 1;
+                  V_pilot_sign := R_pilot_counter(4);
+                  V_pilot_wav_index := "10"                             -- or 32 (sine)
+                                     &  R_pilot_counter(3 downto 0);    -- 0..15 running
+                  -- convert from 8-bit wav table to 16-bit R_rds_step
+                  -- dbpsk_wav_map has range 1..127
+                  -- as we have counted up to 2 until
+                  -- we get here, phase is changed by 180, related to 57 kHz subc
+                  -- so we correct phase comparing V_pilot_sign = 1 
+                  if V_pilot_sign = '1' then
+                    -- positive wave (y)
+                    R_pilot_step <= dbpsk_wav_map(conv_integer(V_pilot_wav_index)) & x"00";
+                  else
+                    -- negative wave (128 - y) (64 is 0-point)
+                    R_pilot_step <= (x"80" - dbpsk_wav_map(conv_integer(V_pilot_wav_index))) & x"00";
+                  end if;
+	        else
+	          R_pilot_cdiv <= R_pilot_cdiv + 1;  
+	        end if;
+	    end if;
+	end if;
+    end process;
+    -- ************************** END PILOT 19kHz ******************************
+
+    -- ****************** SUBCARRIER 57kHz *******************
+    process(clk_25m)
+    variable V_subc_wav_index: std_logic_vector(5 downto 0); -- 6-bit index 0..63
+    variable V_subc_sign: std_logic; -- current sign of waveform 0:(+) 1:(-)
+    begin
+        if rising_edge(clk_25m) then
+            -- clocked at 25 MHz
+            -- strobed at 1.824 MHz
+	    if R_rds_strobe = '1' then
+	        -- 57 kHz generation
+	          R_subc_counter <= R_subc_counter + 1;
+                  V_subc_sign := R_subc_counter(4);
+                  V_subc_wav_index := "10"                             -- or 32 (sine)
+                                     &  R_subc_counter(3 downto 0);    -- 0..15 running
+                  -- convert from 8-bit wav table to 16-bit R_rds_step
+                  -- dbpsk_wav_map has range 1..127
+                  if V_subc_sign = '0' then
+                    -- positive wave (y)
+                    R_subc_step <= dbpsk_wav_map(conv_integer(V_subc_wav_index)) & x"00";
+                  else
+                    -- negative wave (128 - y) (64 is 0-point)
+                    R_subc_step <= (x"80" - dbpsk_wav_map(conv_integer(V_subc_wav_index))) & x"00";
+                  end if;
+	    end if;
+	end if;
+    end process;
+    -- ************************** END SUBCARRIER 57kHz ******************************
+
+    -- ****************** RDS MODULATOR 1187.5 Hz *******************
+    process(clk_25m)
+    variable V_dbpsk_wav_index: std_logic_vector(5 downto 0); -- 6-bit index 0..63
+    variable V_rds_sign: std_logic; -- current sign of waveform 0:(+) 1:(-)
+    begin
+        if rising_edge(clk_25m) then
+	    -- ************************** RDS ******************************
+            -- clocked at 25 MHz
+            -- strobed at 1.824 MHz
+	    if R_rds_strobe = '1' then
+	      -- divide by 48 to get 1187.5 Hz from 32-element lookup table
+              if R_rds_cdiv = 47 then
+                R_rds_cdiv <= 0;
+	        -- RDS works on 1187.5 bit rate
+	        -- 57KHz subcarrier should be AM modulated using RDS
+	        -- adjust modulation to obtain
+	        -- +-2kHz FM width on the main carrier
+
+                R_rds_counter <= R_rds_counter + 1; -- increment counter 0..31
+                if R_rds_counter = 31 then
+                  -- fetch new bit
+                  -- R_rds_bit <= rds_msg_map(conv_integer(R_rds_msg_index))(conv_integer(R_rds_bit_index));
+                  -- R_rds_bit <= not(R_rds_bit);
+                  -- R_rds_bit <= '0'; -- test: bit 0 should output 57 kHz
+                  -- change phase if bit was 1
+                  R_rds_phase <= R_rds_phase xor R_rds_bit; -- change the phase
+                  -- take next bit
+                  R_rds_bit_index <= R_rds_bit_index - 1;
+                  if R_rds_bit_index = 7 then
+                     -- take next byte
+                     R_rds_msg_index <= R_rds_msg_index + 1;
+                     if R_rds_msg_index >= (C_rds_msg_len-1) then
+                       R_rds_msg_index <= 0;
+                     end if;
+                  end if;
+                  R_rds_bit <= rds_msg_map(conv_integer(R_rds_msg_index))(conv_integer(R_rds_bit_index));
+                end if;
+                if R_rds_bit = '0' then
+                  -- rds bit 0: continuous sine wave
+                  -- use lookup table values 32..47
+                  -- index = (counter and 15) or 32
+                  -- R_rds_step <= dbpsk_wav_map(conv_integer(
+                  --              '1' & R_rds_counter(3 downto 0)
+                  --              )) & x"00";
+                  V_rds_sign := not(R_rds_counter(4) xor R_rds_phase);
+                else
+                  -- rds bit 1: phase changing sine wave
+                  -- use lookup table values 0..31
+                  -- index = counter and 31
+                  -- R_rds_step <= dbpsk_wav_map(conv_integer(
+                  --              R_rds_counter
+                  --              )) & x"00";
+                  V_rds_sign := R_rds_phase;
+                end if;
+                V_dbpsk_wav_index := (not(R_rds_bit))                 -- 32 (sine)
+                                   & (R_rds_counter(4) and R_rds_bit) -- 0..15 (sine) or 0..31 (phase change)
+                                   &  R_rds_counter(3 downto 0);      -- 0..15 same for both
+                -- convert from 8-bit wav table to 16-bit R_rds_step
+                -- dbpsk_wav_map has range 1..127
+                if V_rds_sign = '0' then
+                  -- positive wave (y)
+                  R_rds_step <= dbpsk_wav_map(conv_integer(V_dbpsk_wav_index)) & x"00";
+                else
+                  -- negative wave (128 - y) (64 is 0-point)
+                  -- R_rds_step <= (x"80" - dbpsk_wav_map(conv_integer(V_dbpsk_wav_index))) & x"00";
+                  R_rds_step <= (x"80" - dbpsk_wav_map(conv_integer(V_dbpsk_wav_index))) & x"00";
+                end if;
+              else
+                R_rds_cdiv <= R_rds_cdiv + 1;
+              end if;
+              R_rds_mul <= R_subc_step * R_rds_step;
+              -- R_rds_mul <= R_pilot_step * R_rds_step;
+              -- R_rds_mul <= R_subc_step * x"7F00";
+              -- R_rds_mul <= R_rds_step * x"7F00";
+              R_rds_mod_step <= R_rds_mul(30 downto 15);
+	    end if;
+	end if;
+    end process;
+    -- ************************** END RDS MODULATOR 1187.5 Hz ******************************
+
+    process(clk_25m)
+    begin
+        if rising_edge(clk_25m) then
+            -- final mixing stage tone+rds output to PWM
+	    R_pwm <= R_pwm + (R_pwm(16) & (
+	             (R_tone_step(15 downto 0))
+	           -- + ("000" & R_pilot_step(15 downto 3)) -- pilot should be 10x quieter than max tone
+	           -- + (        R_subc_step(15 downto 0)) -- subcarrier unmodulated, same volume as pilot
+	           -- + (R_rds_step(15 downto 4)) -- audible data at 1187.5 Hz
+	           + (R_rds_mod_step(15 downto 0)) -- subcarrier modulated with data at 1187.5 Hz
+                     ));
+	    -- R_pwm <= R_pwm + (R_pwm(16) & (R_rds_step + R_pilot_step));
+	    -- R_pwm <= R_pwm + (R_pwm(16) & (R_pilot_step));
+	end if;
+    end process;
+
+    tone_out <= R_pwm(16);
+end;

@@ -1,0 +1,6 @@
+for audio mixing, use signed integers not unsigned
+[ ] read FM broadcasting wiki
+[ ] wrong understanding of 57kHz carrier
+    what is currently done, DBPSK encoding is
+    done over 57kHz carrier, what probably should
+    be done is 1187 Hz modulation FM 57kHz+-(bandwith 3..4kHz?)

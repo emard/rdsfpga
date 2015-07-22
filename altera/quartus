@@ -1,0 +1,10 @@
+#!/bin/bash
+
+ALTERAPATH=/mt/lxc/schroot/altera/rootfs/usr/local/altera
+
+if [ -d ${ALTERAPATH}/quartus/bin/ ] ; then
+      export PATH=${ALTERAPATH}/quartus/bin/:"${PATH}"
+      export QSYS_ROOTDIR="${ALTERAPATH}/quartus/sopc_builder/bin"
+fi
+
+make -C quartus program
