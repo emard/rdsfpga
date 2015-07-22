@@ -196,7 +196,7 @@ architecture RTL of tonegen is
     signal R_time: std_logic_vector(31 downto 0);
     signal R_pwm: std_logic_vector(16 downto 0);
     signal R_sin: signed(15 downto 0);
-    signal R_tone_step: signed(15 downto 0);
+    signal R_tone_pcm: signed(15 downto 0);
 
     constant C_attack: signed(15 downto 0) := 291;
     constant C_deccay: signed(15 downto 0) := 24;
@@ -266,7 +266,7 @@ x"5e",x"62",x"67",x"6d",x"73",x"79",x"7d",x"7f",x"7f",x"7d",x"78",x"71",x"68",x"
 x"3a",x"2e",x"22",x"18",x"0f",x"08",x"03",x"01",x"01",x"03",x"08",x"0f",x"18",x"22",x"2e",x"3a"
     );
     signal R_rds_cdiv: std_logic_vector(5 downto 0); -- 6-bit divisor 0..47
-    signal R_rds_step: signed(15 downto 0); -- 16 bit ADC value for RDS waveform
+    signal R_rds_pcm: signed(15 downto 0); -- 16 bit ADC value for RDS waveform
     signal R_rds_msg_index: std_logic_vector(15 downto 0); -- 16 bit index for message
     signal R_rds_byte: std_logic_vector(7 downto 0); -- current byte to send
     signal R_rds_bit_index: std_logic_vector(2 downto 0); -- current bit index 0..7
@@ -275,14 +275,14 @@ x"3a",x"2e",x"22",x"18",x"0f",x"08",x"03",x"01",x"01",x"03",x"08",x"0f",x"18",x"
     signal R_rds_counter: std_logic_vector(4 downto 0); -- 5-bit wav counter 0..31
     signal R_rds_t_ps: std_logic_vector(30 downto 0); -- RDS timer in picoseconds (20 bit max range 1e6 ps)
     signal R_rds_mul: signed(31 downto 0);
-    signal R_rds_mod_step: signed(15 downto 0);
+    signal R_rds_mod_pcm: signed(15 downto 0);
 
     signal R_pilot_counter: std_logic_vector(4 downto 0) := (others => '0'); -- 5-bit wav counter 0..31
     signal R_pilot_cdiv: std_logic_vector(1 downto 0); -- 2-bit divisor 0..2
-    signal R_pilot_step: std_logic_vector(15 downto 0); -- 16 bit ADC value for 19kHz pilot sine wave
+    signal R_pilot_pcm: std_logic_vector(15 downto 0); -- 16 bit ADC value for 19kHz pilot sine wave
 
     signal R_subc_counter: std_logic_vector(4 downto 0) := (others => '0'); -- 5-bit wav counter 0..31
-    signal R_subc_step: signed(15 downto 0); -- 16 bit ADC value for 19kHz pilot sine wave
+    signal R_subc_pcm: signed(15 downto 0); -- 16 bit ADC value for 19kHz pilot sine wave
     
     constant C_rds_clock_in_period: std_logic_vector(30 downto 0) := 40000; -- 40 ns = 40000 ps = 25 MHz
     -- constant C_rds_clock_in_period: std_logic_vector(19 downto 0) := 1000; -- slow cca 1kHz
@@ -351,12 +351,12 @@ begin
 
             -- volume is ignored (commented out)
 	    -- case volume is
-	    --	when "00" =>	R_tone_step <= "000" & R_mul(31 downto 19);
-	    --	when "01" =>	R_tone_step <= "00" & R_mul(31 downto 18);
-	    --	when "10" =>	R_tone_step <= "0" & R_mul(31 downto 17);
-	    --	when others =>	R_tone_step <= R_mul(31 downto 16);
+	    --	when "00" =>	R_tone_pcm <= "000" & R_mul(31 downto 19);
+	    --	when "01" =>	R_tone_pcm <= "00" & R_mul(31 downto 18);
+	    --	when "10" =>	R_tone_pcm <= "0" & R_mul(31 downto 17);
+	    --	when others =>	R_tone_pcm <= R_mul(31 downto 16);
 	    -- end case;
-	    R_tone_step <= R_mul(31 downto 16);
+	    R_tone_pcm <= R_mul(31 downto 16);
         end if;
     end process;
 
@@ -395,17 +395,17 @@ begin
                   V_pilot_sign := R_pilot_counter(4);
                   V_pilot_wav_index := "10"                             -- or 32 (sine)
                                      &  R_pilot_counter(3 downto 0);    -- 0..15 running
-                  -- convert from 8-bit wav table to 16-bit R_rds_step
+                  -- convert from 8-bit wav table to 16-bit R_rds_pcm
                   -- dbpsk_wav_map has range 1..127
                   -- as we have counted up to 2 until
                   -- we get here, phase is changed by 180, related to 57 kHz subc
                   -- so we correct phase comparing V_pilot_sign = 1 
                   if V_pilot_sign = '1' then
                     -- positive wave (y)
-                    R_pilot_step <= dbpsk_wav_map(conv_integer(V_pilot_wav_index)) & x"00";
+                    R_pilot_pcm <= dbpsk_wav_map(conv_integer(V_pilot_wav_index)) & x"00";
                   else
                     -- negative wave (128 - y) (64 is 0-point)
-                    R_pilot_step <= (x"80" - dbpsk_wav_map(conv_integer(V_pilot_wav_index))) & x"00";
+                    R_pilot_pcm <= (x"80" - dbpsk_wav_map(conv_integer(V_pilot_wav_index))) & x"00";
                   end if;
 	        else
 	          R_pilot_cdiv <= R_pilot_cdiv + 1;  
@@ -429,14 +429,14 @@ begin
                   V_subc_sign := R_subc_counter(4);
                   V_subc_wav_index := "10"                             -- or 32 (sine)
                                      &  R_subc_counter(3 downto 0);    -- 0..15 running
-                  -- convert from 8-bit wav table to 16-bit R_rds_step
+                  -- convert from 8-bit wav table to 16-bit R_rds_pcm
                   -- dbpsk_wav_map has range 1..127
                   if V_subc_sign = '0' then
                     -- positive wave (y)
-                    R_subc_step <= signed( (dbpsk_wav_map(conv_integer(V_subc_wav_index)) - x"40" ) & x"00");
+                    R_subc_pcm <= signed( (dbpsk_wav_map(conv_integer(V_subc_wav_index)) - x"40" ) & x"00");
                   else
                     -- negative wave (128 - y) (64 is 0-point)
-                    R_subc_step <= signed( (x"40" - dbpsk_wav_map(conv_integer(V_subc_wav_index))) & x"00");
+                    R_subc_pcm <= signed( (x"40" - dbpsk_wav_map(conv_integer(V_subc_wav_index))) & x"00");
                   end if;
 	    end if;
 	end if;
@@ -484,7 +484,7 @@ begin
                   -- rds bit 0: continuous sine wave
                   -- use lookup table values 32..47
                   -- index = (counter and 15) or 32
-                  -- R_rds_step <= dbpsk_wav_map(conv_integer(
+                  -- R_rds_pcm <= dbpsk_wav_map(conv_integer(
                   --              '1' & R_rds_counter(3 downto 0)
                   --              )) & x"00";
                   V_rds_sign := not(R_rds_counter(4) xor R_rds_phase);
@@ -492,7 +492,7 @@ begin
                   -- rds bit 1: phase changing sine wave
                   -- use lookup table values 0..31
                   -- index = counter and 31
-                  -- R_rds_step <= dbpsk_wav_map(conv_integer(
+                  -- R_rds_pcm <= dbpsk_wav_map(conv_integer(
                   --              R_rds_counter
                   --              )) & x"00";
                   V_rds_sign := R_rds_phase;
@@ -500,24 +500,24 @@ begin
                 V_dbpsk_wav_index := (not(R_rds_bit))                 -- 32 (sine)
                                    & (R_rds_counter(4) and R_rds_bit) -- 0..15 (sine) or 0..31 (phase change)
                                    &  R_rds_counter(3 downto 0);      -- 0..15 same for both
-                -- convert from 8-bit wav table to 16-bit R_rds_step
+                -- convert from 8-bit wav table to 16-bit R_rds_pcm
                 -- dbpsk_wav_map has range 1..127
                 if V_rds_sign = '0' then
                   -- positive wave (y)
-                  R_rds_step <= signed( dbpsk_wav_map(conv_integer(V_dbpsk_wav_index)) - x"40") & x"00";
+                  R_rds_pcm <= signed( dbpsk_wav_map(conv_integer(V_dbpsk_wav_index)) - x"40") & x"00";
                 else
                   -- negative wave (128 - y) (64 is 0-point)
-                  -- R_rds_step <= (x"80" - dbpsk_wav_map(conv_integer(V_dbpsk_wav_index))) & x"00";
-                  R_rds_step <= signed( (x"40" - dbpsk_wav_map(conv_integer(V_dbpsk_wav_index)))) & x"00";
+                  -- R_rds_pcm <= (x"80" - dbpsk_wav_map(conv_integer(V_dbpsk_wav_index))) & x"00";
+                  R_rds_pcm <= signed( (x"40" - dbpsk_wav_map(conv_integer(V_dbpsk_wav_index)))) & x"00";
                 end if;
               else
                 R_rds_cdiv <= R_rds_cdiv + 1;
               end if;
-              R_rds_mul <= R_subc_step * R_rds_step;
-              -- R_rds_mul <= R_pilot_step * R_rds_step;
-              -- R_rds_mul <= R_subc_step * x"7F00";
-              -- R_rds_mul <= R_rds_step * x"7F00";
-              R_rds_mod_step <= R_rds_mul(30 downto 15);
+              R_rds_mul <= R_subc_pcm * R_rds_pcm;
+              -- R_rds_mul <= R_pilot_pcm * R_rds_pcm;
+              -- R_rds_mul <= R_subc_pcm * x"7F00";
+              -- R_rds_mul <= R_rds_pcm * x"7F00";
+              R_rds_mod_pcm <= R_rds_mul(30 downto 15);
 	    end if;
 	end if;
     end process;
@@ -528,18 +528,18 @@ begin
         if rising_edge(clk_25m) then
             -- final mixing stage tone+rds output to PWM
 	    --R_pwm <= R_pwm + (R_pwm(16) & (
-	    --         (R_tone_step(15 downto 0))
-	           -- + ("000" & R_pilot_step(15 downto 3)) -- pilot should be 10x quieter than max tone
-	           -- + (        R_subc_step(15 downto 0)) -- subcarrier unmodulated, same volume as pilot
-	           -- + (R_rds_step(15 downto 4)) -- audible data at 1187.5 Hz
-	    --       + (R_rds_mod_step(15 downto 0)) -- subcarrier modulated with data at 1187.5 Hz
+	    --         (R_tone_pcm(15 downto 0))
+	           -- + ("000" & R_pilot_pcm(15 downto 3)) -- pilot should be 10x quieter than max tone
+	           -- + (        R_subc_pcm(15 downto 0)) -- subcarrier unmodulated, same volume as pilot
+	           -- + (R_rds_pcm(15 downto 4)) -- audible data at 1187.5 Hz
+	    --       + (R_rds_mod_pcm(15 downto 0)) -- subcarrier modulated with data at 1187.5 Hz
             --         ));
-	    -- R_pwm <= R_pwm + (R_pwm(16) & (R_rds_step + R_pilot_step));
-	    -- R_pwm <= R_pwm + (R_pwm(16) & (R_pilot_step));
+	    -- R_pwm <= R_pwm + (R_pwm(16) & (R_rds_pcm + R_pilot_pcm));
+	    -- R_pwm <= R_pwm + (R_pwm(16) & (R_pilot_pcm));
 	end if;
     end process;
 
-    -- pcm_out <= signed(R_tone_step(15 downto 0)-x"8000");
-    pcm_out <= R_tone_step + R_rds_step;
+    -- pcm_out <= signed(R_tone_pcm(15 downto 0)-x"8000");
+    pcm_out <= R_tone_pcm + R_rds_pcm;
     tone_out <= R_pwm(16);
 end;
