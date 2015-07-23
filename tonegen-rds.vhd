@@ -204,9 +204,9 @@ architecture RTL of tonegen is
     
     -- RDS related registers
     -- rds message converted from pic assember to stream of bytes
-    constant zC_rds_msg_len: std_logic_vector(15 downto 0) := 260;
-    type zrds_msg_type is array(0 to 259) of std_logic_vector(7 downto 0);
-    constant zrds_msg_map: zrds_msg_type := (
+    constant xC_rds_msg_len: std_logic_vector(15 downto 0) := 260;
+    type xrds_msg_type is array(0 to 259) of std_logic_vector(7 downto 0);
+    constant xrds_msg_map: xrds_msg_type := (
 x"c0",x"00",x"9b",x"02",x"03",x"29",x"fc",x"00",x"07",x"01",x"49",x"86",x"a9",
 x"c0",x"00",x"9b",x"02",x"02",x"47",x"bc",x"00",x"07",x"01",x"91",x"a7",x"c6",
 x"c0",x"00",x"9b",x"02",x"02",x"ab",x"0c",x"00",x"07",x"01",x"bc",x"d3",x"94",
@@ -229,32 +229,22 @@ x"c0",x"00",x"9b",x"08",x"03",x"91",x"b2",x"02",x"08",x"e0",x"80",x"80",x"dc",
 x"c0",x"00",x"9b",x"08",x"03",x"ca",x"22",x"02",x"08",x"e0",x"80",x"80",x"dc"
     );
     -- testing 8 bits
-    constant xC_rds_msg_len: std_logic_vector(15 downto 0) := 9;
-    type xrds_msg_type is array(0 to 8) of std_logic_vector(7 downto 0);
-    constant xrds_msg_map: xrds_msg_type := (
-      x"00",
-      x"01",
-      x"03",
-      x"07",
-      x"0f",
-      x"1f",
-      x"3f",
-      x"7f",
-      x"ff"
+    constant yC_rds_msg_len: std_logic_vector(15 downto 0) := 9;
+    type yrds_msg_type is array(0 to 8) of std_logic_vector(7 downto 0);
+    constant yrds_msg_map: yrds_msg_type := (
+      x"00", x"01", x"03", x"07", x"0f", x"1f", x"3f", x"7f", x"ff"
     );
     -- testing 8 bits
-    constant C_rds_msg_len: std_logic_vector(15 downto 0) := 9;
-    type rds_msg_type is array(0 to 8) of std_logic_vector(7 downto 0);
+    constant zC_rds_msg_len: std_logic_vector(15 downto 0) := 4;
+    type zrds_msg_type is array(0 to 3) of std_logic_vector(7 downto 0);
+    constant zrds_msg_map: zrds_msg_type := (
+      x"00", x"00", x"01", x"00"
+    );
+    -- testing 1 group of 13 bytes
+    constant C_rds_msg_len: std_logic_vector(15 downto 0) := 13;
+    type rds_msg_type is array(0 to 12) of std_logic_vector(7 downto 0);
     constant rds_msg_map: rds_msg_type := (
-      x"00",
-      x"00",
-      x"00",
-      x"00",
-      x"00",
-      x"00",
-      x"00",
-      x"00",
-      x"00"
+x"12",x"34",x"1a",x"89",x"01",x"96",x"82",x"02",x"00",x"00",x"80",x"80",x"dc"
     );
     -- dbpsk waveform
     constant C_dbpsk_wav_len: std_logic_vector(7 downto 0) := 48;
@@ -286,9 +276,10 @@ x"3a",x"2e",x"22",x"18",x"0f",x"08",x"03",x"01",x"01",x"03",x"08",x"0f",x"18",x"
     
     constant C_clkdiv_bits: integer := 20; -- enough for 1M counts
     signal R_rds_t_ps: std_logic_vector(C_clkdiv_bits-1 downto 0); -- RDS timer in picoseconds (20 bit max range 1e6 ps)
-    -- constant C_rds_clock_in_period: std_logic_vector(C_clkdiv_bits-1 downto 0) := 40000; -- 40 ns = 40000 ps = 25 MHz
-    constant C_rds_clock_in_period: std_logic_vector(C_clkdiv_bits-1 downto 0) := 400; -- 100x slower
-    constant C_rds_clock_out_period: std_logic_vector(C_clkdiv_bits-1 downto 0) := 548245; -- 548245 ps = 1.824 MHz -> 57 kHz
+    constant C_rds_clock_in_period: std_logic_vector(C_clkdiv_bits-1 downto 0) := 40000; -- 40 ns = 40000 ps = 25 MHz
+    -- constant C_rds_clock_in_period: std_logic_vector(C_clkdiv_bits-1 downto 0) := 800; -- 50x slower
+    -- constant C_rds_clock_in_period: std_logic_vector(C_clkdiv_bits-1 downto 0) := 400; -- 100x slower
+    constant C_rds_clock_out_period: std_logic_vector(C_clkdiv_bits-1 downto 0) := 548246; -- 548245.6 ps = 1.824 MHz -> 57 kHz
     -- constant C_rds_clock_out_period: std_logic_vector(C_clkdiv_bits-1 downto 0) := 5482450; -- 5482450 ps = 182.4 kHz -> 5.7 kHz
     -- constant C_rds_clock_out_period: std_logic_vector(C_clkdiv_bits-1 downto 0) := 54824500; -- 54824500 ps = 18.24 kHz -> 570 Hz
     signal R_rds_strobe: std_logic; -- 1.824 MHz strobe signal
@@ -365,17 +356,20 @@ begin
     -- RDS needs 57 kHz carrier wave.
     -- lookup table period length is 32 entries
     -- so we need strobe frequency of 32*57 kHz = 1.824 MHz
-    -- or period of 548245 ps
+    -- or period of 548245.6 ps
+    -- change state on falling edge, so strobe level is
+    -- stable when compared at rising edge
     process(clk_25m)
     begin
-      if rising_edge(clk_25m) then
-        if R_rds_t_ps > C_rds_clock_out_period  then
-          -- step back one out-period and add 40ns (1/25MHz)
-          R_rds_t_ps <= R_rds_t_ps - C_rds_clock_out_period + C_rds_clock_in_period;
-          R_rds_strobe <= '1';
-        else
-          R_rds_t_ps <= R_rds_t_ps + C_rds_clock_in_period; -- add 40ns (1/25MHz)
+      if falling_edge(clk_25m) then
+        if R_rds_t_ps < C_rds_clock_out_period  then
+          -- add 40ns (1/25MHz)
+          R_rds_t_ps <= R_rds_t_ps + C_rds_clock_in_period;
           R_rds_strobe <= '0';
+        else
+          -- add 40ns (1/25MHz) as always and step back one out-period
+          R_rds_t_ps <= R_rds_t_ps + C_rds_clock_in_period - C_rds_clock_out_period;
+          R_rds_strobe <= '1';
         end if;
       end if;
     end process;
@@ -463,14 +457,13 @@ begin
             -- strobed at 1.824 MHz
 	    if R_rds_strobe = '1' then
 	      -- 0-47: divide by 48 to get 1187.5 Hz from 32-element lookup table
-              -- if R_rds_cdiv = 47 then
-              if R_rds_cdiv = 470 then
+              if R_rds_cdiv = 47 then
+              -- if R_rds_cdiv = 470 then
                 R_rds_cdiv <= 0;
 	        -- RDS works on 1187.5 bit rate
 	        -- 57KHz subcarrier should be AM modulated using RDS
 	        -- adjust modulation to obtain
 	        -- +-2kHz FM width on the main carrier
-
                 R_rds_counter <= R_rds_counter + 1; -- increment counter 0..31
                 if R_rds_counter = 31 then
                   -- fetch new bit
@@ -481,7 +474,7 @@ begin
                   R_rds_phase <= R_rds_phase xor R_rds_bit; -- change the phase
                   -- take next bit
                   R_rds_bit_index <= R_rds_bit_index - 1;
-                  if R_rds_bit_index = 7 then -- 0 or 7 here????
+                  if R_rds_bit_index = 0 then -- 0 or 7 here????
                      -- take next byte
                      R_rds_msg_index <= R_rds_msg_index + 1;
                      if R_rds_msg_index >= (C_rds_msg_len-1) then
@@ -525,7 +518,8 @@ begin
               R_rds_mul <= R_subc_pcm * R_rds_pcm;
               -- R_rds_mul <= R_pilot_pcm * R_rds_pcm;
               -- R_rds_mul <= R_subc_pcm * 64;
-              R_rds_mod_pcm <= R_rds_mul(13 downto 0) & "00"; -- max "000" multiply by 8 
+              -- R_rds_mul <= R_rds_pcm * 64;
+              R_rds_mod_pcm <= R_rds_mul(15 downto 0); -- max "000" multiply by 8 
 	    end if;
 	end if;
     end process;
@@ -533,6 +527,6 @@ begin
 
     -- pcm_out <= R_tone_pcm + R_rds_mul; -- audible rds modulation at 1187.5 Hz
     -- pcm_out <= R_tone_pcm + R_rds_mod_pcm + R_pilot_pcm;
-    -- pcm_out <= R_tone_pcm + R_rds_mod_pcm;
-    pcm_out <= R_tone_pcm;
+    pcm_out <= R_tone_pcm + R_rds_mod_pcm;
+    -- pcm_out <= R_tone_pcm;
 end;
