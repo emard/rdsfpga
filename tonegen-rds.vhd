@@ -1,3 +1,7 @@
+-- Tone with MIDI frequencies: Marko Zec
+-- RDS and DBPSK modulation: Davor Jadrijevic
+-- LICENSE=BSD
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_arith.all;
@@ -193,7 +197,7 @@ architecture RTL of tonegen is
 
     constant C_attack: signed(15 downto 0) := 291;
     constant C_deccay: signed(15 downto 0) := 24;
-    constant C_maxvol: signed(15 downto 0) := 16383; -- 0x3fff
+    constant C_maxvol: signed(15 downto 0) := 32767;
     constant C_debounce: std_logic_vector(7 downto 0) := 0; -- require n identical readings, 0 to disable
     
     -- RDS related registers
@@ -223,6 +227,12 @@ x"c0",x"00",x"9b",x"08",x"03",x"7d",x"02",x"02",x"08",x"e0",x"80",x"80",x"dc",
 x"c0",x"00",x"9b",x"08",x"03",x"91",x"b2",x"02",x"08",x"e0",x"80",x"80",x"dc",
 x"c0",x"00",x"9b",x"08",x"03",x"ca",x"22",x"02",x"08",x"e0",x"80",x"80",x"dc"
     );
+    -- testing 1 group of 13 bytes, PID=0x1234
+    constant uC_rds_msg_len: std_logic_vector(15 downto 0) := 13;
+    type urds_msg_type is array(0 to 12) of std_logic_vector(7 downto 0);
+    constant urds_msg_map: urds_msg_type := (
+x"12",x"34",x"1a",x"89",x"01",x"96",x"82",x"02",x"00",x"00",x"80",x"80",x"dc"
+    );
     -- testing 8 bits
     constant yC_rds_msg_len: std_logic_vector(15 downto 0) := 9;
     type yrds_msg_type is array(0 to 8) of std_logic_vector(7 downto 0);
@@ -235,13 +245,9 @@ x"c0",x"00",x"9b",x"08",x"03",x"ca",x"22",x"02",x"08",x"e0",x"80",x"80",x"dc"
     constant zrds_msg_map: zrds_msg_type := (
       x"00", x"00", x"01", x"00"
     );
-    -- testing 1 group of 13 bytes
-    constant uC_rds_msg_len: std_logic_vector(15 downto 0) := 13;
-    type urds_msg_type is array(0 to 12) of std_logic_vector(7 downto 0);
-    constant urds_msg_map: urds_msg_type := (
-x"12",x"34",x"1a",x"89",x"01",x"96",x"82",x"02",x"00",x"00",x"80",x"80",x"dc"
-    );
-    -- dbpsk waveform
+    -- DBPSK waveform used to modulate RDS at 1187.5 Hz
+    -- and to generate sine wave for 57kHz subcarrier
+    -- 48 byte lookup table provides sufficient resolution
     constant C_dbpsk_wav_len: std_logic_vector(7 downto 0) := 48;
     type dbpsk_wav_type is array(0 to 47) of std_logic_vector(7 downto 0);
     constant dbpsk_wav_map: dbpsk_wav_type := (
@@ -489,6 +495,8 @@ begin
                 R_rds_cdiv <= R_rds_cdiv + 1;
               end if;
               R_rds_mod_pcm <= R_subc_pcm * R_rds_pcm;
+              -- R_rds_mod_pcm range: 63*63 = (-3969 .. +3960)
+              -- take care not to overmodulate RDS signal
 	    end if;
 	end if;
     end process;
