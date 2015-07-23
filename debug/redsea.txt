@@ -1,0 +1,12 @@
+compile redsea with -DDEBUG option
+
+run it with
+redsea.pl -d 108M
+
+and inspect generated IQ
+*.wav files with baudline command
+
+compare modulation volume of some normal
+station with fpga rds transmitter and adjust
+volume with bit shifting until you see similar
+volume
