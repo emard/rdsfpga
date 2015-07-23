@@ -49,20 +49,13 @@ module main(
   assign led[6:0] = midi; // display midi with the leds
   
   /* convert midi code to PWM tone output */
-  wire tone_out_pwm;
   wire signed [15:0] tone_out_pcm;
   tonegen midi2tone(
     .clk_25m(clk_25MHz),
     .code(midi),
     .volume(2'd2),
-    // .tone_out(tone_out_pwm),
     .pcm_out(tone_out_pcm)
   );
-  assign p_tip[0] = tone_out_pwm;
-  assign p_tip[1] = tone_out_pwm;
-  assign p_tip[2] = tone_out_pwm;
-  assign p_tip[3] = tone_out_pwm;
-  assign p_ring   = tone_out_pwm;
   
   /* 250 MHz clock needed for the transmitter */
   wire clk_250MHz;
@@ -76,8 +69,8 @@ module main(
   fmgen fm_tx(
     .clk_25m(clk_25MHz),
     .clk_250m(clk_250MHz),
-    // .pwm_in(tone_out_pwm),
     .pcm_in(tone_out_pcm),
+    .cw_freq(108000000),
     .fm_out(antenna)
   );
   

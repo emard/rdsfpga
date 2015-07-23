@@ -13,8 +13,7 @@ generic (
 port (
         clk_25m: in std_logic;
 	clk_250m: in std_logic;
-	-- cw_freq: in std_logic_vector(31 downto 0);
-	pwm_in: in std_logic;
+	cw_freq: in std_logic_vector(31 downto 0);
 	pcm_in: in signed(15 downto 0);
 	fm_out: out std_logic
 );
@@ -25,12 +24,10 @@ architecture x of fmgen is
 
 	signal R_pcm, R_pcm_avg: signed(15 downto 0);
 	signal R_cnt: integer;
-	signal R_pwm_in: std_logic;
 	signal R_dds_mul_x1, R_dds_mul_x2: std_logic_vector(31 downto 0);
 	constant C_dds_mul_y: std_logic_vector(31 downto 0) :=
 	    std_logic_vector(conv_signed(integer(2.0**30 / C_fdds * 2.0**28), 32));
 	signal R_dds_mul_res: std_logic_vector(63 downto 0);
-	constant cw_freq: std_logic_vector(31 downto 0) := 100000000;
 
 begin
     --
@@ -43,25 +40,13 @@ begin
     -- PWM -> PCM
     --
 
-    copy_pcm_input: if C_use_pcm_in generate
-      R_pcm <= pcm_in;
-    end generate;
+    R_pcm <= pcm_in;
 
     process(clk_25m)
     variable delta: std_logic_vector(15 downto 0);
     variable R_clk_div: std_logic_vector(3 downto 0);
     begin
-        -- delta := x"ffff" - R_pcm;
-
         if rising_edge(clk_25m) then
-            --convert_pwm_to_pcm: if not C_use_pcm_in then
-            --if pwm_in = '1' then
-            --    R_pcm <= R_pcm + (x"00" & delta(15 downto 8));
-            --else
-            --    R_pcm <= R_pcm - (x"00" & R_pcm(15 downto 8));
-            --end if;
-            --end if;
-
 	    R_clk_div := R_clk_div + 1;
 	    if R_clk_div = x"0" then
 		if (R_pcm - R_pcm_avg) > 0 then
@@ -80,7 +65,7 @@ begin
     process (clk_25m)
     begin
 	if (rising_edge(clk_25m)) then
-	    R_dds_mul_x1 <= cw_freq + std_logic_vector(resize(R_pcm-R_pcm_avg, 32));
+	    R_dds_mul_x1 <= cw_freq + std_logic_vector(resize((R_pcm-R_pcm_avg) & "0", 32)); -- "0" multiply by 2
 	end if;
     end process;
 	
