@@ -204,9 +204,10 @@ architecture RTL of tonegen is
     
     -- RDS related registers
     -- rds message converted from pic assember to stream of bytes
-    constant xC_rds_msg_len: std_logic_vector(15 downto 0) := 260;
-    type xrds_msg_type is array(0 to 259) of std_logic_vector(7 downto 0);
-    constant xrds_msg_map: xrds_msg_type := (
+    -- PS="Radio4", RT="HELLO", PID=0xC000
+    constant C_rds_msg_len: std_logic_vector(15 downto 0) := 260;
+    type rds_msg_type is array(0 to 259) of std_logic_vector(7 downto 0);
+    constant rds_msg_map: rds_msg_type := (
 x"c0",x"00",x"9b",x"02",x"03",x"29",x"fc",x"00",x"07",x"01",x"49",x"86",x"a9",
 x"c0",x"00",x"9b",x"02",x"02",x"47",x"bc",x"00",x"07",x"01",x"91",x"a7",x"c6",
 x"c0",x"00",x"9b",x"02",x"02",x"ab",x"0c",x"00",x"07",x"01",x"bc",x"d3",x"94",
@@ -241,9 +242,9 @@ x"c0",x"00",x"9b",x"08",x"03",x"ca",x"22",x"02",x"08",x"e0",x"80",x"80",x"dc"
       x"00", x"00", x"01", x"00"
     );
     -- testing 1 group of 13 bytes
-    constant C_rds_msg_len: std_logic_vector(15 downto 0) := 13;
-    type rds_msg_type is array(0 to 12) of std_logic_vector(7 downto 0);
-    constant rds_msg_map: rds_msg_type := (
+    constant uC_rds_msg_len: std_logic_vector(15 downto 0) := 13;
+    type urds_msg_type is array(0 to 12) of std_logic_vector(7 downto 0);
+    constant urds_msg_map: urds_msg_type := (
 x"12",x"34",x"1a",x"89",x"01",x"96",x"82",x"02",x"00",x"00",x"80",x"80",x"dc"
     );
     -- dbpsk waveform
@@ -474,7 +475,7 @@ begin
                   R_rds_phase <= R_rds_phase xor R_rds_bit; -- change the phase
                   -- take next bit
                   R_rds_bit_index <= R_rds_bit_index - 1;
-                  if R_rds_bit_index = 0 then -- 0 or 7 here????
+                  if R_rds_bit_index = 0 then
                      -- take next byte
                      R_rds_msg_index <= R_rds_msg_index + 1;
                      if R_rds_msg_index >= (C_rds_msg_len-1) then
