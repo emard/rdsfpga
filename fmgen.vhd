@@ -8,7 +8,7 @@ entity fmgen is
 generic (
 	C_use_pcm_in: boolean := true;
 	C_fm_acclen: integer := 28;
-	C_fdds: real := 250000000.0
+	C_fdds: real := 250000000.0 -- input clock frequency
 );
 port (
         clk_25m: in std_logic;
@@ -42,6 +42,7 @@ begin
 
     R_pcm <= pcm_in;
 
+    -- calculate signal average to remove DC offset
     process(clk_25m)
     variable delta: std_logic_vector(15 downto 0);
     variable R_clk_div: std_logic_vector(3 downto 0);

@@ -53,7 +53,6 @@ module main(
   tonegen midi2tone(
     .clk_25m(clk_25MHz),
     .code(midi),
-    .volume(2'd2),
     .pcm_out(tone_out_pcm)
   );
   
