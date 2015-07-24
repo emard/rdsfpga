@@ -30,7 +30,7 @@
 
 #include "rds.h"
 
-#define NGROUPS 81
+#define NGROUPS 20
 
 /* Simple test program */
 int main(int argc, char **argv) {

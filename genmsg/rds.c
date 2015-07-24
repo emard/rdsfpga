@@ -103,8 +103,8 @@ int get_rds_ct_group(uint16_t *blocks) {
     } else return 0;
 }
 
-/* Creates an RDS group. This generates sequences of the form 0A, 0A, 0A, 0A, 2A, etc.
-   The pattern is of length 5, the variable 'state' keeps track of where we are in the
+/* Creates an RDS group. This generates sequences of the form 4x 0A, 16x 2A, etc.
+   The pattern is of length 20, the variable 'state' keeps track of where we are in the
    pattern. 'ps_state' and 'rt_state' keep track of where we are in the PS (0A) sequence
    or RT (2A) sequence, respectively.
 */
@@ -116,8 +116,15 @@ void get_rds_group(int *buffer) {
     #ifdef DEBUG
     printf("state=%d ps_state=%d rt_state=%d\n", state, ps_state, rt_state);
     #endif
+    int clock_enabled = 1;
+    int clock_generated = 0;
     // Generate block content
-    if(! get_rds_ct_group(blocks)) { // CT (clock time) has priority on other group types
+    if(clock_enabled)
+      clock_generated = get_rds_ct_group(blocks);
+        
+    if( clock_generated == 0 )
+    // CT (clock time) if enabled has priority on other group types
+    {
         if(state < 4) {
             blocks[1] = 0x0400 | ps_state;
             if(rds_params.ta) blocks[1] |= 0x0010;
@@ -125,7 +132,7 @@ void get_rds_group(int *buffer) {
             blocks[3] = rds_params.ps[ps_state*2]<<8 | rds_params.ps[ps_state*2+1];
             ps_state++;
             if(ps_state >= 4) ps_state = 0;
-        } else { // state == 5
+        } else { // state 4 .. 19
             blocks[1] = 0x2400 | rt_state;
             blocks[2] = rds_params.rt[rt_state*4+0]<<8 | rds_params.rt[rt_state*4+1];
             blocks[3] = rds_params.rt[rt_state*4+2]<<8 | rds_params.rt[rt_state*4+3];
@@ -134,7 +141,7 @@ void get_rds_group(int *buffer) {
         }
     
         state++;
-        if(state >= 5) state = 0;
+        if(state >= 20) state = 0;
     }
     
     // Calculate the checkword for each block and emit the bits
