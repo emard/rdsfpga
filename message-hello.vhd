@@ -10,6 +10,7 @@ use ieee.numeric_std.all;
 package message is
     -- RDS message converted from pic assember to stream of bytes
     -- PS="Radio4", RT="HELLO", PID=0xC000
+    -- All parts of the message has correct CRC
     type rds_msg_type is array(0 to 259) of std_logic_vector(7 downto 0);
     constant rds_msg_map: rds_msg_type := (
 x"c0",x"00",x"9b",x"02",x"03",x"29",x"fc",x"00",x"07",x"01",x"49",x"86",x"a9",
