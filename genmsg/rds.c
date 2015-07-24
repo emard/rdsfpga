@@ -116,7 +116,7 @@ void get_rds_group(int *buffer) {
     #ifdef DEBUG
     printf("state=%d ps_state=%d rt_state=%d\n", state, ps_state, rt_state);
     #endif
-    int clock_enabled = 1;
+    int clock_enabled = 0;
     int clock_generated = 0;
     // Generate block content
     if(clock_enabled)
