@@ -1,7 +1,7 @@
 CC = gcc
 STD_CFLAGS = -Wall -std=gnu99 -c -g -O3
 
-CFLAGS = $(STD_CFLAGS)
+CFLAGS = $(STD_CFLAGS) # -DDEBUG
 
 rds_msg: rds.o rds_msg.o
 	$(CC) -o rds_msg rds_msg.o rds.o -lm
