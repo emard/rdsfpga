@@ -67,10 +67,10 @@ x"12",x"34",x"1a",x"89",x"01",x"96",x"82",x"02",x"00",x"00",x"80",x"80",x"dc"
     -- and to generate sine wave for 57kHz subcarrier
     -- 48 elements of bits in lookup table provide 
     -- sufficient resolution in time and amplitude
-    constant C_dbpsk_bits: integer := 7;
+    constant C_dbpsk_bits: integer := 8;
 
     -- DBPSK lookup table
-    constant C_dbpsk_wav_len: std_logic_vector(7 downto 0) := 48;
+    constant C_dbpsk_wav_len: std_logic_vector(5 downto 0) := 48;
     type dbpsk_wav_type is array(0 to 47) of std_logic_vector(7 downto 0);
     constant dbpsk_wav_map: dbpsk_wav_type := (
 x"47",x"53",x"5e",x"67",x"6e",x"73",x"75",x"75",x"73",x"6f",x"6a",x"66",x"61",x"5e",x"5c",x"5c",
