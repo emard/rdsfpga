@@ -14,7 +14,7 @@ port (
         clk_25m: in std_logic;
 	clk_250m: in std_logic;
 	cw_freq: in std_logic_vector(31 downto 0);
-	pcm_in: in signed(15 downto 0);
+	pcm_in: in signed(15 downto 0); -- FM swing +-2x this amplitude in Hz
 	fm_out: out std_logic
 );
 end fmgen;
@@ -30,19 +30,9 @@ architecture x of fmgen is
 	signal R_dds_mul_res: std_logic_vector(63 downto 0);
 
 begin
-    --
-    -- Instanciraj PLL blok
-    --
-    -- I_pll250m: entity pll251m port map (clk => clk_25m, clkop => clk_250m, lock => lock_250m);
-    -- clk_250m <= clk_25m;
-
-    --
-    -- PWM -> PCM
-    --
-
     R_pcm <= pcm_in;
 
-    -- calculate signal average to remove DC offset
+    -- Calculate signal average to remove DC offset
     process(clk_25m)
     variable delta: std_logic_vector(15 downto 0);
     variable R_clk_div: std_logic_vector(3 downto 0);
@@ -61,7 +51,8 @@ begin
     end process;
 
     --
-    -- Izracun trenutne frekvencije signala nosioca (frekvencijska modulacija)
+    -- Calculate current frequency of carrier wave (Frequency modulation)
+    -- Removing DC offset
     --
     process (clk_25m)
     begin
@@ -71,7 +62,7 @@ begin
     end process;
 	
     --
-    -- Generiranje signala nosioca
+    -- Generate carrier wave
     --
     process (clk_250m)
     begin

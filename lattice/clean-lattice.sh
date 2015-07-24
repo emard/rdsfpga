@@ -11,7 +11,8 @@ SYMLINK="lattice/ulx2s.lpf \
   lattice/${PROJECT}.ldf \
   lattice/lattice_pll_25MHz_250MHz.vhd \
   enkoder.vhd \
-  tonegen-rds.vhd \
+  tonegen.vhd \
+  rds.vhd \
   fmgen.vhd \
   main.v"
 

@@ -48,12 +48,19 @@ module main(
   );
   assign led[6:0] = midi; // display midi with the leds
   
-  /* convert midi code to PWM tone output */
-  wire signed [15:0] tone_out_pcm;
+  /* convert midi code to PCM tone output */
+  wire signed [15:0] tone_pcm;
   tonegen midi2tone(
     .clk_25m(clk_25MHz),
     .code(midi),
-    .pcm_out(tone_out_pcm)
+    .pcm_out(tone_pcm)
+  );
+  
+  wire signed [15:0] mix_rds_pcm;
+  rds mixer(
+    .clk_25m(clk_25MHz),
+    .pcm_in(tone_pcm),
+    .pcm_out(mix_rds_pcm)
   );
   
   /* 250 MHz clock needed for the transmitter */
@@ -68,7 +75,7 @@ module main(
   fmgen fm_tx(
     .clk_25m(clk_25MHz),
     .clk_250m(clk_250MHz),
-    .pcm_in(tone_out_pcm),
+    .pcm_in(mix_rds_pcm),
     .cw_freq(108000000),
     .fm_out(antenna)
   );
