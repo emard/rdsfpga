@@ -14,7 +14,7 @@ with open(filename) as f:
     if a[0] == "movlw":
       n += 1
       array += (int(a[3], 10), a[1]),
-print("constant C_rds_msg_len: std_logic_vector(15 downto 0) := %d;" % len(array));
+# print("constant C_rds_msg_len: std_logic_vector(15 downto 0) := %d;" % len(array));
 print("type rds_msg_type is array(0 to %d) of std_logic_vector(7 downto 0);" % (len(array)-1));
 print("constant rds_msg_map: rds_msg_type := (");
 j = 0
