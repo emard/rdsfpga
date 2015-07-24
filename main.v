@@ -76,7 +76,7 @@ module main(
     .clk_25m(clk_25MHz),
     .clk_250m(clk_250MHz),
     .pcm_in(mix_rds_pcm),
-    .cw_freq(108000000),
+    .cw_freq(88000000),
     .fm_out(antenna)
   );
   
