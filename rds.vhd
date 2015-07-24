@@ -83,11 +83,11 @@ x"3a",x"2e",x"22",x"18",x"0f",x"08",x"03",x"01",x"01",x"03",x"08",x"0f",x"18",x"
     signal R_rds_bit: std_logic; -- current bit to send
     signal R_rds_phase: std_logic; -- current phase 0:(+) 1:(-)
     signal R_rds_counter: std_logic_vector(4 downto 0); -- 5-bit wav counter 0..31
-    signal S_rds_mod_pcm: signed(15 downto 0);
     signal S_rds_sign: std_logic; -- current sign of waveform 0:(+) 1:(-)
     signal S_dbpsk_wav_index: std_logic_vector(5 downto 0); -- 6-bit index 0..63
     signal S_dbpsk_wav_value: signed(7 downto 0);
     signal S_rds_pcm: signed(7 downto 0); -- 8 bit ADC value for RDS waveform
+    signal S_rds_mod_pcm: signed(15 downto 0);
 
     signal R_pilot_counter: std_logic_vector(4 downto 0) := (others => '0'); -- 5-bit wav counter 0..31
     signal R_pilot_cdiv: std_logic_vector(1 downto 0); -- 2-bit divisor 0..2
@@ -97,7 +97,6 @@ x"3a",x"2e",x"22",x"18",x"0f",x"08",x"03",x"01",x"01",x"03",x"08",x"0f",x"18",x"
     signal S_pilot_pcm: signed(7 downto 0); -- 8 bit ADC value
 
     signal R_subc_counter: std_logic_vector(4 downto 0) := (others => '0'); -- 5-bit wav counter 0..31
-    signal R_subc_pcm: signed(7 downto 0); -- 8 bit ADC value for 19kHz pilot sine wave
     signal S_subc_sign: std_logic; -- current sign of waveform 0:(+) 1:(-)
     signal S_subc_wav_index: std_logic_vector(5 downto 0); -- 6-bit index 0..63
     signal S_subc_wav_value: signed(7 downto 0);
