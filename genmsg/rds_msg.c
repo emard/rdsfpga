@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
 
     if(argc < 4) {
         fprintf(stderr, "Error: missing argument.\n");
-        fprintf(stderr, "Syntax: rds_wav <pid dec/hex> <short name> <longer message>\n");
+        fprintf(stderr, "Syntax: rds_wav <pid 16 bit dec/hex> <station name 1-8 chars> <message 1-64 chars>\n");
         return EXIT_FAILURE;
     }
     
