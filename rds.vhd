@@ -91,6 +91,10 @@ x"3a",x"2e",x"22",x"18",x"0f",x"08",x"03",x"01",x"01",x"03",x"08",x"0f",x"18",x"
 
     signal R_subc_counter: std_logic_vector(4 downto 0) := (others => '0'); -- 5-bit wav counter 0..31
     signal R_subc_pcm: signed(7 downto 0); -- 8 bit ADC value for 19kHz pilot sine wave
+    signal S_subc_sign: std_logic; -- current sign of waveform 0:(+) 1:(-)
+    signal S_subc_wav_index: std_logic_vector(5 downto 0); -- 6-bit index 0..63
+    signal S_subc_wav_value: signed(7 downto 0);
+    signal S_subc_pcm: signed(7 downto 0); -- 8 bit ADC value for 19kHz pilot sine wave
     
     constant C_clkdiv_bits: integer := 20; -- enough for 1M counts
     signal R_rds_t_ps: std_logic_vector(C_clkdiv_bits-1 downto 0); -- RDS timer in picoseconds (20 bit max range 1e6 ps)
@@ -161,6 +165,16 @@ begin
     -- ************************** END PILOT 19kHz ******************************
 
     -- ****************** SUBCARRIER 57kHz *******************
+    
+    -- S_subc_sign <= R_subc_counter(4);
+    S_subc_wav_index <= "10"                         -- or 32 (sine)
+                      &  R_subc_counter(3 downto 0); -- 0..15 running
+    -- phase warning: negative sine values at index 32..47
+    S_subc_wav_value <= signed(dbpsk_wav_map(conv_integer(S_subc_wav_index)) - x"40");
+    S_subc_pcm <= S_subc_wav_value when R_subc_counter(4) = '0'
+           else  -S_subc_wav_value;
+    -- S_subc_pcm range: (-63 .. +63)
+
     process(clk_25m)
     variable V_subc_wav_index: std_logic_vector(5 downto 0); -- 6-bit index 0..63
     variable V_subc_wav_value: signed(7 downto 0);
@@ -172,18 +186,17 @@ begin
 	    if R_rds_strobe = '1' then
 	        -- 57 kHz generation
 	          R_subc_counter <= R_subc_counter + 1;
-                  V_subc_sign := R_subc_counter(4);
-                  V_subc_wav_index := "10"                             -- or 32 (sine)
-                                     &  R_subc_counter(3 downto 0);    -- 0..15 running
-                  V_subc_wav_value := signed(dbpsk_wav_map(conv_integer(V_subc_wav_index)) - x"40");
-                  -- convert from 8-bit wav table to 16-bit R_rds_pcm
+                  -- V_subc_sign := R_subc_counter(4);
+                  --V_subc_wav_index := "10"                             -- or 32 (sine)
+                  --                   &  R_subc_counter(3 downto 0);    -- 0..15 running
+                  -- V_subc_wav_value := signed(dbpsk_wav_map(conv_integer(S_subc_wav_index)) - x"40");
                   -- dbpsk_wav_map has range 1..127
-                  if V_subc_sign = '0' then
+                  if S_subc_sign = '0' then
                     -- positive wave
-                    R_subc_pcm <= V_subc_wav_value;
+                    R_subc_pcm <= S_subc_wav_value;
                   else
                     -- negative wave
-                    R_subc_pcm <= -V_subc_wav_value;
+                    R_subc_pcm <= -S_subc_wav_value;
                   end if;
                   -- R_subc_pcm range: (-63 .. +63)
 	    end if;
@@ -263,7 +276,7 @@ begin
                 R_rds_cdiv <= R_rds_cdiv - 1; -- countdown from 47 to 0
               end if;
               -- AM modulation of subcarrier with rds dbpsk wave
-              R_rds_mod_pcm <= R_subc_pcm * R_rds_pcm;
+              R_rds_mod_pcm <= S_subc_pcm * R_rds_pcm;
               -- R_rds_mod_pcm range: 63*63 = (-3969 .. +3969)
               -- take care not to overmodulate RDS signal
 	    end if;
