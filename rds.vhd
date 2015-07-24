@@ -65,8 +65,8 @@ x"12",x"34",x"1a",x"89",x"01",x"96",x"82",x"02",x"00",x"00",x"80",x"80",x"dc"
     );
     -- DBPSK waveform is used to modulate RDS at 1187.5 Hz
     -- and to generate sine wave for 57kHz subcarrier
-    -- 48 elements of bits in lookup table provide 
-    -- sufficient resolution in time and amplitude
+    -- 48 elements of 7 bits (range 1..127) in lookup table 
+    -- provide sufficient resolution for time and amplitude
     constant C_dbpsk_bits: integer := 8;
 
     -- DBPSK lookup table
@@ -126,6 +126,7 @@ begin
     -- ****************** PILOT 19kHz (only for stereo, not used for mono) *******************
     process(clk_25m)
     variable V_pilot_wav_index: std_logic_vector(5 downto 0); -- 6-bit index 0..63
+    variable V_pilot_wav_value: signed(7 downto 0);
     variable V_pilot_sign: std_logic; -- current sign of waveform 0:(+) 1:(-)
     begin
         if rising_edge(clk_25m) then
@@ -139,6 +140,7 @@ begin
                   V_pilot_sign := R_pilot_counter(4);
                   V_pilot_wav_index := "10"                             -- or 32 (sine)
                                      &  R_pilot_counter(3 downto 0);    -- 0..15 running
+                  V_pilot_wav_value := signed(dbpsk_wav_map(conv_integer(V_pilot_wav_index)) - x"40");
                   -- convert from 8-bit wav table to 16-bit R_rds_pcm
                   -- dbpsk_wav_map has range 1..127
                   -- as we have counted up to 2 until
@@ -146,10 +148,10 @@ begin
                   -- so we correct phase comparing V_pilot_sign = 1 
                   if V_pilot_sign = '1' then
                     -- positive wave (y)
-                    R_pilot_pcm <= signed(dbpsk_wav_map(conv_integer(V_pilot_wav_index)) - x"40");
+                    R_pilot_pcm <= V_pilot_wav_value;
                   else
                     -- negative wave (128 - y) (64 is 0-point)
-                    R_pilot_pcm <= signed(x"40" - dbpsk_wav_map(conv_integer(V_pilot_wav_index)));
+                    R_pilot_pcm <= -V_pilot_wav_value;
                   end if;
                   -- R_pilot_pcm range (-63 .. +63)
 	        else
@@ -163,7 +165,7 @@ begin
     -- ****************** SUBCARRIER 57kHz *******************
     process(clk_25m)
     variable V_subc_wav_index: std_logic_vector(5 downto 0); -- 6-bit index 0..63
-    variable V_subc_wav_value: std_logic_vector(7 downto 0);
+    variable V_subc_wav_value: signed(7 downto 0);
     variable V_subc_sign: std_logic; -- current sign of waveform 0:(+) 1:(-)
     begin
         if rising_edge(clk_25m) then
@@ -175,15 +177,15 @@ begin
                   V_subc_sign := R_subc_counter(4);
                   V_subc_wav_index := "10"                             -- or 32 (sine)
                                      &  R_subc_counter(3 downto 0);    -- 0..15 running
-                  V_subc_wav_value := dbpsk_wav_map(conv_integer(V_subc_wav_index));
+                  V_subc_wav_value := signed(dbpsk_wav_map(conv_integer(V_subc_wav_index)) - x"40");
                   -- convert from 8-bit wav table to 16-bit R_rds_pcm
                   -- dbpsk_wav_map has range 1..127
                   if V_subc_sign = '0' then
-                    -- positive wave (y)
-                    R_subc_pcm <= signed(V_subc_wav_value - x"40");
+                    -- positive wave
+                    R_subc_pcm <= V_subc_wav_value;
                   else
-                    -- negative wave (128 - y) (64 is 0-point)
-                    R_subc_pcm <= signed(x"40" - V_subc_wav_value);
+                    -- negative wave
+                    R_subc_pcm <= -V_subc_wav_value;
                   end if;
                   -- R_subc_pcm range: (-63 .. +63)
 	    end if;
@@ -194,7 +196,7 @@ begin
     -- ****************** RDS MODULATOR 1187.5 Hz *******************
     process(clk_25m)
     variable V_dbpsk_wav_index: std_logic_vector(5 downto 0); -- 6-bit index 0..63
-    variable V_dbpsk_wav_value: std_logic_vector(7 downto 0);
+    variable V_dbpsk_wav_value: signed(7 downto 0);
     variable V_rds_sign: std_logic; -- current sign of waveform 0:(+) 1:(-)
     begin
         if rising_edge(clk_25m) then
@@ -203,9 +205,8 @@ begin
             -- strobed at 1.824 MHz
 	    if R_rds_strobe = '1' then
 	      -- 0-47: divide by 48 to get 1187.5 Hz from 32-element lookup table
-              if R_rds_cdiv = 47 then
-              -- if R_rds_cdiv = 470 then
-                R_rds_cdiv <= 0;
+              if R_rds_cdiv = 0 then
+                R_rds_cdiv <= 47; -- countdown from 47 to 0
 	        -- RDS works on 1187.5 bit rate
 	        -- 57KHz subcarrier should be AM modulated using RDS
 	        -- adjust modulation to obtain
@@ -249,20 +250,21 @@ begin
                 V_dbpsk_wav_index := (not(R_rds_bit))                 -- 32 (sine)
                                    & (R_rds_counter(4) and R_rds_bit) -- 0..15 (sine) or 0..31 (phase change)
                                    &  R_rds_counter(3 downto 0);      -- 0..15 same for both
-                V_dbpsk_wav_value := dbpsk_wav_map(conv_integer(V_dbpsk_wav_index));
+                V_dbpsk_wav_value := signed(dbpsk_wav_map(conv_integer(V_dbpsk_wav_index)) - x"40");
                 -- convert from 8-bit wav table to 16-bit R_rds_pcm
                 -- dbpsk_wav_map has range 1..127
                 if V_rds_sign = '0' then
-                  -- positive wave (y)
-                  R_rds_pcm <= signed(V_dbpsk_wav_value - x"40");
+                  -- positive wave
+                  R_rds_pcm <= V_dbpsk_wav_value;
                 else
-                  -- negative wave (128 - y) (64 is 0-point)
-                  R_rds_pcm <= signed(x"40" - V_dbpsk_wav_value);
+                  -- negative wave
+                  R_rds_pcm <= -V_dbpsk_wav_value;
                 end if;
                 -- R_rds_pcm range: (-63 .. +63)
               else
-                R_rds_cdiv <= R_rds_cdiv + 1;
+                R_rds_cdiv <= R_rds_cdiv - 1; -- countdown from 47 to 0
               end if;
+              -- AM modulation of subcarrier with rds dbpsk wave
               R_rds_mod_pcm <= R_subc_pcm * R_rds_pcm;
               -- R_rds_mod_pcm range: 63*63 = (-3969 .. +3969)
               -- take care not to overmodulate RDS signal
