@@ -7,6 +7,7 @@ use ieee.std_logic_1164.all;
 use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
+use work.message.all; -- RDS message in file message.vhd
 
 entity rds is
 port (
@@ -19,46 +20,6 @@ end rds;
 
 architecture RTL of rds is
     -- RDS related registers
-    -- rds message converted from pic assember to stream of bytes
-    -- PS="Radio4", RT="HELLO", PID=0xC000
-    type rds_msg_type is array(0 to 259) of std_logic_vector(7 downto 0);
-    constant rds_msg_map: rds_msg_type := (
-x"c0",x"00",x"9b",x"02",x"03",x"29",x"fc",x"00",x"07",x"01",x"49",x"86",x"a9",
-x"c0",x"00",x"9b",x"02",x"02",x"47",x"bc",x"00",x"07",x"01",x"91",x"a7",x"c6",
-x"c0",x"00",x"9b",x"02",x"02",x"ab",x"0c",x"00",x"07",x"01",x"bc",x"d3",x"94",
-x"c0",x"00",x"9b",x"02",x"02",x"f0",x"9c",x"00",x"07",x"00",x"80",x"80",x"dc",
-x"c0",x"00",x"9b",x"08",x"00",x"23",x"74",x"84",x"50",x"f5",x"31",x"33",x"13",
-x"c0",x"00",x"9b",x"08",x"00",x"78",x"e4",x"f2",x"08",x"f4",x"80",x"80",x"dc",
-x"c0",x"00",x"9b",x"08",x"00",x"94",x"52",x"02",x"08",x"e0",x"80",x"80",x"dc",
-x"c0",x"00",x"9b",x"08",x"00",x"cf",x"c2",x"02",x"08",x"e0",x"80",x"80",x"dc",
-x"c0",x"00",x"9b",x"08",x"01",x"16",x"a2",x"02",x"08",x"e0",x"80",x"80",x"dc",
-x"c0",x"00",x"9b",x"08",x"01",x"4d",x"32",x"02",x"08",x"e0",x"80",x"80",x"dc",
-x"c0",x"00",x"9b",x"08",x"01",x"a1",x"82",x"02",x"08",x"e0",x"80",x"80",x"dc",
-x"c0",x"00",x"9b",x"08",x"01",x"fa",x"12",x"02",x"08",x"e0",x"80",x"80",x"dc",
-x"c0",x"00",x"9b",x"08",x"02",x"13",x"42",x"02",x"08",x"e0",x"80",x"80",x"dc",
-x"c0",x"00",x"9b",x"08",x"02",x"48",x"d2",x"02",x"08",x"e0",x"80",x"80",x"dc",
-x"c0",x"00",x"9b",x"08",x"02",x"a4",x"62",x"02",x"08",x"e0",x"80",x"80",x"dc",
-x"c0",x"00",x"9b",x"08",x"02",x"ff",x"f2",x"02",x"08",x"e0",x"80",x"80",x"dc",
-x"c0",x"00",x"9b",x"08",x"03",x"26",x"92",x"02",x"08",x"e0",x"80",x"80",x"dc",
-x"c0",x"00",x"9b",x"08",x"03",x"7d",x"02",x"02",x"08",x"e0",x"80",x"80",x"dc",
-x"c0",x"00",x"9b",x"08",x"03",x"91",x"b2",x"02",x"08",x"e0",x"80",x"80",x"dc",
-x"c0",x"00",x"9b",x"08",x"03",x"ca",x"22",x"02",x"08",x"e0",x"80",x"80",x"dc"
-    );
-    -- testing 1 group of 13 bytes, PID=0x1234
-    type urds_msg_type is array(0 to 12) of std_logic_vector(7 downto 0);
-    constant urds_msg_map: urds_msg_type := (
-x"12",x"34",x"1a",x"89",x"01",x"96",x"82",x"02",x"00",x"00",x"80",x"80",x"dc"
-    );
-    -- testing 8 bits
-    type yrds_msg_type is array(0 to 8) of std_logic_vector(7 downto 0);
-    constant yrds_msg_map: yrds_msg_type := (
-      x"00", x"01", x"03", x"07", x"0f", x"1f", x"3f", x"7f", x"ff"
-    );
-    -- testing 8 bits
-    type zrds_msg_type is array(0 to 3) of std_logic_vector(7 downto 0);
-    constant zrds_msg_map: zrds_msg_type := (
-      x"00", x"00", x"01", x"00"
-    );
     -- get length of RDS message
     constant C_rds_msg_len: integer := rds_msg_map'length;
 
