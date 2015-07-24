@@ -10,6 +10,13 @@ use ieee.numeric_std.all;
 use work.message.all; -- RDS message in file message.vhd
 
 entity rds is
+generic (
+    C_external_strobe: boolean := false; -- external 1.864 MHz strobe (doesn't work)
+    C_stereo: boolean := false; -- true: generate 19kHz pilot wave
+    -- true: spend more LUTs to use 32-point sinewave and multiply 
+    -- false: save LUTs, use 4-point multiplexer, no multiply
+    C_fine_subc: boolean := false
+);
 port (
     clk_25m: in std_logic;
     pcm_in: in signed(15 downto 0); -- from tone generator
@@ -20,7 +27,7 @@ end rds;
 
 architecture RTL of rds is
     -- RDS related registers
-    -- get length of RDS message
+    -- get length of RDS message (file message.vhd)
     constant C_rds_msg_len: integer := rds_msg_map'length;
 
     -- DBPSK waveform is used to modulate RDS at 1187.5 Hz
@@ -49,19 +56,22 @@ x"3a",x"2e",x"22",x"18",x"0f",x"08",x"03",x"01",x"01",x"03",x"08",x"0f",x"18",x"
     signal S_dbpsk_wav_value: signed(7 downto 0);
     signal S_rds_pcm: signed(7 downto 0); -- 8 bit ADC value for RDS waveform
     signal S_rds_mod_pcm: signed(15 downto 0);
+    signal S_rds_coarse_pcm: signed(7 downto 0);
 
     signal R_pilot_counter: std_logic_vector(4 downto 0) := (others => '0'); -- 5-bit wav counter 0..31
     signal R_pilot_cdiv: std_logic_vector(1 downto 0); -- 2-bit divisor 0..2
     signal S_pilot_wav_index: std_logic_vector(5 downto 0); -- 6-bit index 0..63
     signal S_pilot_wav_value: signed(7 downto 0);
     signal S_pilot_sign: std_logic; -- current sign of waveform 0:(+) 1:(-)
-    signal S_pilot_pcm: signed(7 downto 0); -- 8 bit ADC value
+    signal S_pilot_pcm: signed(7 downto 0) := (others => '0'); -- 8 bit ADC value
 
     signal R_subc_counter: std_logic_vector(4 downto 0) := (others => '0'); -- 5-bit wav counter 0..31
-    signal S_subc_sign: std_logic; -- current sign of waveform 0:(+) 1:(-)
+    signal R_subc_cdiv: std_logic_vector(4 downto 0) := (others => '0'); -- divide to 57kHz
     signal S_subc_wav_index: std_logic_vector(5 downto 0); -- 6-bit index 0..63
     signal S_subc_wav_value: signed(7 downto 0);
     signal S_subc_pcm: signed(7 downto 0); -- 8 bit ADC value for 19kHz pilot sine wave
+
+    signal S_strobe_1M824: std_logic;
     
     constant C_clkdiv_bits: integer := 20; -- enough for 1M counts
     signal R_rds_t_ps: std_logic_vector(C_clkdiv_bits-1 downto 0); -- RDS timer in picoseconds (20 bit max range 1e6 ps)
@@ -77,6 +87,7 @@ begin
     -- or period of 548245.6 ps
     -- change state on falling edge, so strobe level is
     -- stable when compared at rising edge
+    internal_strobe: if not C_external_strobe generate
     process(clk_25m)
     begin
       if falling_edge(clk_25m) then
@@ -91,8 +102,27 @@ begin
         end if;
       end if;
     end process;
+    end generate;
+    
+    external_strobe: if C_external_strobe generate
+    -- strange, why this doesn't work?
+    -- it creates the same frequency, but if
+    -- R_rds_strobe is replaced with this external strube
+    -- and passed to RDS modulator 
+    -- then RDS text is not received
+    clk1M824: entity work.strobe
+    generic map(
+      clk_in_hz => 25000000,   -- Hz (25 MHz)
+      strobe_out_hz => 1824000 -- Hz (1.824 MHz)
+    )
+    port map(
+      clk_in => clk_25m,
+      strobe_out => R_rds_strobe
+    );
+    end generate;
 
     -- ****************** PILOT 19kHz (only for stereo, not used for mono) *******************
+    generate_pilot_19kHz: if C_stereo generate
     process(clk_25m)
     begin
         if rising_edge(clk_25m) then
@@ -119,9 +149,11 @@ begin
     S_pilot_pcm <= S_pilot_wav_value when R_pilot_counter(4) = '1'
              else -S_pilot_wav_value;
     -- S_pilot_pcm range: (-63 .. +63)
+    end generate;
     -- ****************** END PILOT 19kHz ***************************
 
     -- ****************** SUBCARRIER 57kHz **************************
+    fine_subcarrier_sine: if C_fine_subc generate
     process(clk_25m)
     begin
         if rising_edge(clk_25m) then
@@ -142,16 +174,18 @@ begin
     S_subc_pcm <= S_subc_wav_value when R_subc_counter(4) = '1'
            else  -S_subc_wav_value;
     -- S_subc_pcm range: (-63 .. +63)
+    end generate;
     -- ****************** END SUBCARRIER 57kHz **********************
 
-    -- ****************** RDS MODULATOR 1187.5 Hz *******************
+    -- *********** RDS MODULATOR 57 kHz / 1187.5 Hz *****************
     process(clk_25m)
     begin
         if rising_edge(clk_25m) then
-	    -- ************************** RDS ******************************
             -- clocked at 25 MHz
             -- strobed at 1.824 MHz
 	    if R_rds_strobe = '1' then
+	      -- divides by 32 to get 57 kHz subcarrier
+	      R_subc_cdiv <= R_subc_cdiv + 1;
 	      -- 0-47: divide by 48 to get 1187.5 Hz from 32-element lookup table
               if R_rds_cdiv = 0 then
                 R_rds_cdiv <= 47; -- countdown from 47 to 0
@@ -198,18 +232,44 @@ begin
                        & (R_rds_counter(4) and R_rds_bit) -- 0..15 (sine) or 0..31 (phase change)
                        &  R_rds_counter(3 downto 0);      -- 0..15 same for both
     S_dbpsk_wav_value <= signed(dbpsk_wav_map(conv_integer(S_dbpsk_wav_index)) - x"40");
+
+    -- AM modulation of subcarrier with DBPSK wave
+    -- do not overmodulate RDS signal
+    -- signed value is passed to fmgen modulator
+    -- transmits value*2Hz carrier frequency shift
+    -- modulated range of cca -4000 ... +4000 works
+
+    fine_subcarrier: if C_fine_subc generate
     S_rds_pcm <= S_dbpsk_wav_value when S_rds_sign = '1'
            else -S_dbpsk_wav_value;
     -- S_rds_pcm range: (-63 .. +63)
-    -- AM modulation of subcarrier with rds dbpsk wave
     S_rds_mod_pcm <= S_subc_pcm * S_rds_pcm;
     -- S_rds_mod_pcm range: 63*63 = (-3969 .. +3969)
-    -- take care not to overmodulate RDS signal
-    -- when passed to fmgen modulator
-    -- it will result to 2x carrier frequency shift (-7938 .. +7938) Hz
+    end generate;
 
-    -- ****************** END RDS MODULATOR 1187.5 Hz **************
+    -- simple 57kHz mixer with multiplexer
+    -- using 4 points coarse sampled subcarrier at 228 kHz
+    -- no multiplication needed
+    coarse_subcarrier: if not C_fine_subc generate
+    -- sign manipulation with the multiplexer
+    -- avoids calculating double minus
+    with S_rds_sign & R_subc_cdiv(4 downto 3) select
+    S_rds_coarse_pcm <= S_dbpsk_wav_value when "101" | "011",
+                       -S_dbpsk_wav_value when "111" | "001",
+                        0         when others;
+    S_rds_mod_pcm <= S_rds_coarse_pcm * 64; -- signed multiply by 64
+    -- 64 or 63 is the same from amplitude point of view
+    -- 64 is more simple as it uses only bit shifting
+    -- S_rds_mod_pcm range: 63*64 = (-4032 .. +4032)
+    end generate;
+    -- ****************** END RDS MODULATOR **************
 
-    -- mixing input audio with RDS dbpsk
+    -- mixing input audio with RDS DBPSK
+    mix_no_pilot:  if not C_stereo generate
     pcm_out <= pcm_in + S_rds_mod_pcm;
+    end generate;
+
+    mix_pilot:  if C_stereo generate
+    pcm_out <= pcm_in + S_pilot_pcm + S_rds_mod_pcm;
+    end generate;
 end;
