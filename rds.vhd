@@ -21,7 +21,6 @@ architecture RTL of rds is
     -- RDS related registers
     -- rds message converted from pic assember to stream of bytes
     -- PS="Radio4", RT="HELLO", PID=0xC000
-    constant C_rds_msg_len: std_logic_vector(15 downto 0) := 260;
     type rds_msg_type is array(0 to 259) of std_logic_vector(7 downto 0);
     constant rds_msg_map: rds_msg_type := (
 x"c0",x"00",x"9b",x"02",x"03",x"29",x"fc",x"00",x"07",x"01",x"49",x"86",x"a9",
@@ -46,23 +45,23 @@ x"c0",x"00",x"9b",x"08",x"03",x"91",x"b2",x"02",x"08",x"e0",x"80",x"80",x"dc",
 x"c0",x"00",x"9b",x"08",x"03",x"ca",x"22",x"02",x"08",x"e0",x"80",x"80",x"dc"
     );
     -- testing 1 group of 13 bytes, PID=0x1234
-    constant uC_rds_msg_len: std_logic_vector(15 downto 0) := 13;
     type urds_msg_type is array(0 to 12) of std_logic_vector(7 downto 0);
     constant urds_msg_map: urds_msg_type := (
 x"12",x"34",x"1a",x"89",x"01",x"96",x"82",x"02",x"00",x"00",x"80",x"80",x"dc"
     );
     -- testing 8 bits
-    constant yC_rds_msg_len: std_logic_vector(15 downto 0) := 9;
     type yrds_msg_type is array(0 to 8) of std_logic_vector(7 downto 0);
     constant yrds_msg_map: yrds_msg_type := (
       x"00", x"01", x"03", x"07", x"0f", x"1f", x"3f", x"7f", x"ff"
     );
     -- testing 8 bits
-    constant zC_rds_msg_len: std_logic_vector(15 downto 0) := 4;
     type zrds_msg_type is array(0 to 3) of std_logic_vector(7 downto 0);
     constant zrds_msg_map: zrds_msg_type := (
       x"00", x"00", x"01", x"00"
     );
+    -- get length of RDS message
+    constant C_rds_msg_len: integer := rds_msg_map'length;
+
     -- DBPSK waveform is used to modulate RDS at 1187.5 Hz
     -- and to generate sine wave for 57kHz subcarrier
     -- 48 elements of 7 bits (range 1..127) in lookup table 
@@ -70,7 +69,6 @@ x"12",x"34",x"1a",x"89",x"01",x"96",x"82",x"02",x"00",x"00",x"80",x"80",x"dc"
     constant C_dbpsk_bits: integer := 8;
 
     -- DBPSK lookup table
-    constant C_dbpsk_wav_len: std_logic_vector(5 downto 0) := 48;
     type dbpsk_wav_type is array(0 to 47) of std_logic_vector(7 downto 0);
     constant dbpsk_wav_map: dbpsk_wav_type := (
 x"47",x"53",x"5e",x"67",x"6e",x"73",x"75",x"75",x"73",x"6f",x"6a",x"66",x"61",x"5e",x"5c",x"5c",
