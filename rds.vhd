@@ -112,8 +112,8 @@ begin
     -- then RDS text is not received
     clk1M824: entity work.strobe
     generic map(
-      clk_in_hz => 25000000,   -- Hz (25 MHz)
-      strobe_out_hz => 1824000 -- Hz (1.824 MHz)
+      clk_in_hz => 3125,   -- Hz (25 MHz)
+      strobe_out_hz => 228 -- Hz (1.824 MHz)
     )
     port map(
       clk_in => clk_25m,

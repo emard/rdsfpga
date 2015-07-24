@@ -1,1 +1,1 @@
-message-hello.vhd
+message-custom.vhd
