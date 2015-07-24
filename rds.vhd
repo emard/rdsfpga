@@ -83,7 +83,7 @@ x"3a",x"2e",x"22",x"18",x"0f",x"08",x"03",x"01",x"01",x"03",x"08",x"0f",x"18",x"
     signal R_rds_bit: std_logic; -- current bit to send
     signal R_rds_phase: std_logic; -- current phase 0:(+) 1:(-)
     signal R_rds_counter: std_logic_vector(4 downto 0); -- 5-bit wav counter 0..31
-    signal R_rds_mod_pcm: signed(15 downto 0);
+    signal S_rds_mod_pcm: signed(15 downto 0);
     signal S_rds_sign: std_logic; -- current sign of waveform 0:(+) 1:(-)
     signal S_dbpsk_wav_index: std_logic_vector(5 downto 0); -- 6-bit index 0..63
     signal S_dbpsk_wav_value: signed(7 downto 0);
@@ -91,7 +91,10 @@ x"3a",x"2e",x"22",x"18",x"0f",x"08",x"03",x"01",x"01",x"03",x"08",x"0f",x"18",x"
 
     signal R_pilot_counter: std_logic_vector(4 downto 0) := (others => '0'); -- 5-bit wav counter 0..31
     signal R_pilot_cdiv: std_logic_vector(1 downto 0); -- 2-bit divisor 0..2
-    signal R_pilot_pcm: signed(7 downto 0); -- 8 bit ADC value
+    signal S_pilot_wav_index: std_logic_vector(5 downto 0); -- 6-bit index 0..63
+    signal S_pilot_wav_value: signed(7 downto 0);
+    signal S_pilot_sign: std_logic; -- current sign of waveform 0:(+) 1:(-)
+    signal S_pilot_pcm: signed(7 downto 0); -- 8 bit ADC value
 
     signal R_subc_counter: std_logic_vector(4 downto 0) := (others => '0'); -- 5-bit wav counter 0..31
     signal R_subc_pcm: signed(7 downto 0); -- 8 bit ADC value for 19kHz pilot sine wave
@@ -131,41 +134,31 @@ begin
 
     -- ****************** PILOT 19kHz (only for stereo, not used for mono) *******************
     process(clk_25m)
-    variable V_pilot_wav_index: std_logic_vector(5 downto 0); -- 6-bit index 0..63
-    variable V_pilot_wav_value: signed(7 downto 0);
-    variable V_pilot_sign: std_logic; -- current sign of waveform 0:(+) 1:(-)
     begin
         if rising_edge(clk_25m) then
             -- clocked at 25 MHz
             -- strobed at 1.824 MHz
 	    if R_rds_strobe = '1' then
 	        -- pilot 57/3 = 19 kHz generation
-	        if R_pilot_cdiv = 2 then
-	          R_pilot_cdiv <= 0;
+	        if R_pilot_cdiv = 0 then
+	          R_pilot_cdiv <= 2;
 	          R_pilot_counter <= R_pilot_counter + 1;
-                  V_pilot_sign := R_pilot_counter(4);
-                  V_pilot_wav_index := "10"                             -- or 32 (sine)
-                                     &  R_pilot_counter(3 downto 0);    -- 0..15 running
-                  V_pilot_wav_value := signed(dbpsk_wav_map(conv_integer(V_pilot_wav_index)) - x"40");
-                  -- convert from 8-bit wav table to 16-bit R_rds_pcm
-                  -- dbpsk_wav_map has range 1..127
-                  -- as we have counted up to 2 until
-                  -- we get here, phase is changed by 180, related to 57 kHz subc
-                  -- so we correct phase comparing V_pilot_sign = 1 
-                  if V_pilot_sign = '1' then
-                    -- positive wave (y)
-                    R_pilot_pcm <= V_pilot_wav_value;
-                  else
-                    -- negative wave (128 - y) (64 is 0-point)
-                    R_pilot_pcm <= -V_pilot_wav_value;
-                  end if;
-                  -- R_pilot_pcm range (-63 .. +63)
 	        else
-	          R_pilot_cdiv <= R_pilot_cdiv + 1;  
+	          R_pilot_cdiv <= R_pilot_cdiv - 1;
 	        end if;
 	    end if;
 	end if;
     end process;
+    S_pilot_wav_index <= "10"                         -- or 32 (sine)
+                      &  R_pilot_counter(3 downto 0); -- 0..15 running
+    -- dbpsk_wav_map has range 1..127, need to subtract 64
+    -- phase warning: negative sine values at index 32..47
+    -- pilot should be in phase with 57kHz subcarrier
+    -- (rising slope cross 0 at the same point)
+    S_pilot_wav_value <= signed(dbpsk_wav_map(conv_integer(S_pilot_wav_index)) - x"40");
+    S_pilot_pcm <= S_pilot_wav_value when R_pilot_counter(4) = '1'
+             else -S_pilot_wav_value;
+    -- S_pilot_pcm range: (-63 .. +63)
     -- ****************** END PILOT 19kHz ***************************
 
     -- ****************** SUBCARRIER 57kHz **************************
@@ -186,16 +179,13 @@ begin
     -- dbpsk_wav_map has range 1..127, need to subtract 64
     -- phase warning: negative sine values at index 32..47
     S_subc_wav_value <= signed(dbpsk_wav_map(conv_integer(S_subc_wav_index)) - x"40");
-    S_subc_pcm <= S_subc_wav_value when R_subc_counter(4) = '0'
+    S_subc_pcm <= S_subc_wav_value when R_subc_counter(4) = '1'
            else  -S_subc_wav_value;
     -- S_subc_pcm range: (-63 .. +63)
     -- ****************** END SUBCARRIER 57kHz **********************
 
     -- ****************** RDS MODULATOR 1187.5 Hz *******************
     process(clk_25m)
-    variable V_dbpsk_wav_index: std_logic_vector(5 downto 0); -- 6-bit index 0..63
-    variable V_dbpsk_wav_value: signed(7 downto 0);
-    variable V_rds_sign: std_logic; -- current sign of waveform 0:(+) 1:(-)
     begin
         if rising_edge(clk_25m) then
 	    -- ************************** RDS ******************************
@@ -217,10 +207,12 @@ begin
                   -- R_rds_bit <= '0'; -- test: bit 0 should output 1187.5 kHz
                   -- change phase if bit was 1
                   R_rds_phase <= R_rds_phase xor R_rds_bit; -- change the phase
-                  -- take next bit
+                  -- take next bit. Send bits from bit 7 downto bit 0
                   R_rds_bit_index <= R_rds_bit_index - 1;
                   if R_rds_bit_index = 0 then
-                     -- take next byte
+                     -- when bit index is at LSB bit pos 0
+                     -- for next clock cycle prepare next byte
+                     -- (byte sending start at MSB bit pos 7)
                      R_rds_msg_index <= R_rds_msg_index + 1;
                      if R_rds_msg_index >= (C_rds_msg_len-1) then
                        R_rds_msg_index <= 0;
@@ -228,38 +220,9 @@ begin
                   end if;
                   R_rds_bit <= rds_msg_map(conv_integer(R_rds_msg_index))(conv_integer(R_rds_bit_index));
                 end if;
-                if R_rds_bit = '0' then
-                  -- rds bit 0: continuous sine wave
-                  -- use lookup table values 32..47
-                  -- index = (counter and 15) or 32
-                  V_rds_sign := not(R_rds_counter(4) xor R_rds_phase);
-                else
-                  -- rds bit 1: phase changing sine wave
-                  -- use lookup table values 0..31
-                  -- index = counter and 31
-                  V_rds_sign := R_rds_phase;
-                end if;
-                V_dbpsk_wav_index := (not(R_rds_bit))                 -- 32 (sine)
-                                   & (R_rds_counter(4) and R_rds_bit) -- 0..15 (sine) or 0..31 (phase change)
-                                   &  R_rds_counter(3 downto 0);      -- 0..15 same for both
-                V_dbpsk_wav_value := signed(dbpsk_wav_map(conv_integer(V_dbpsk_wav_index)) - x"40");
-                -- convert from 8-bit wav table to 16-bit R_rds_pcm
-                -- dbpsk_wav_map has range 1..127
-                if S_rds_sign = '0' then
-                  -- positive wave
-                  R_rds_pcm <= V_dbpsk_wav_value;
-                else
-                  -- negative wave
-                  R_rds_pcm <= -V_dbpsk_wav_value;
-                end if;
-                -- R_rds_pcm range: (-63 .. +63)
               else
                 R_rds_cdiv <= R_rds_cdiv - 1; -- countdown from 47 to 0
               end if;
-              -- AM modulation of subcarrier with rds dbpsk wave
-              R_rds_mod_pcm <= S_subc_pcm * S_rds_pcm;
-              -- R_rds_mod_pcm range: 63*63 = (-3969 .. +3969)
-              -- take care not to overmodulate RDS signal
 	    end if;
 	end if;
     end process;
@@ -278,7 +241,15 @@ begin
     S_rds_pcm <= S_dbpsk_wav_value when S_rds_sign = '1'
            else -S_dbpsk_wav_value;
     -- S_rds_pcm range: (-63 .. +63)
+    -- AM modulation of subcarrier with rds dbpsk wave
+    S_rds_mod_pcm <= S_subc_pcm * S_rds_pcm;
+    -- S_rds_mod_pcm range: 63*63 = (-3969 .. +3969)
+    -- take care not to overmodulate RDS signal
+    -- when passed to fmgen modulator
+    -- it will result to 2x carrier frequency shift (-7938 .. +7938) Hz
+
     -- ****************** END RDS MODULATOR 1187.5 Hz **************
 
-    pcm_out <= pcm_in + R_rds_mod_pcm;
+    -- mixing input audio with RDS dbpsk
+    pcm_out <= pcm_in + S_rds_mod_pcm;
 end;
