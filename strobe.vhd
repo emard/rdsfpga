@@ -13,8 +13,8 @@ use work.rds_pack.all;
 
 entity strobe is
 generic (
-    clk_in_hz: integer := 25000000;  -- Hz in system clock input frequency
-    strobe_out_hz: integer              -- Hz out strobe output frequency
+    divide: integer := 25000000;  -- Hz in system clock input frequency
+    multiply: integer              -- Hz out strobe output frequency
 );
 port (
     clk_in: in std_logic; -- input clock
@@ -24,14 +24,14 @@ end strobe;
 
 architecture RTL of strobe is
     -- bit: number of bits that can represent input clock freq
-    constant bit: integer := integer(floor((log2(real(clk_in_hz)))+1.0E-16));
-    constant c_add_strobe_out: std_logic_vector(bit downto 0) := std_logic_vector(conv_unsigned(strobe_out_hz, bit+1));
-    constant c_sub_clk_in: std_logic_vector(bit downto 0) := std_logic_vector(conv_unsigned(clk_in_hz, bit+1));
+    constant bit: integer := integer(ceil((log2(real(divide)))+1.0E-16));
+    constant c_add_multiply: std_logic_vector(bit downto 0) := std_logic_vector(conv_unsigned(multiply, bit+1));
+    constant c_sub_divide: std_logic_vector(bit downto 0) := std_logic_vector(conv_unsigned(divide, bit+1));
     signal d, dinc: std_logic_vector(bit downto 0); -- clock divider and increment
     signal R_strobe: std_logic;
 begin
-    dinc <= c_add_strobe_out when d(bit) = '0'
-       else c_add_strobe_out - c_sub_clk_in;
+    dinc <= c_add_multiply when d(bit) = '0'
+       else c_add_multiply - c_sub_divide;
     -- generate strobe
     -- change state on falling edge.
     -- strobe level will be

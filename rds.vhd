@@ -7,18 +7,25 @@ use ieee.std_logic_1164.all;
 use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
+use ieee.math_real.all;
+
 use work.message.all; -- RDS message in file message.vhd
 
 entity rds is
 generic (
-    C_external_strobe: boolean := false; -- external 1.864 MHz strobe (doesn't work)
     C_stereo: boolean := false; -- true: generate 19kHz pilot wave
+    -- input clock frequency * multiply / divide = 1.824 MHz
+    -- example 25 MHz * 228 / 3125 = 1.824 MHz
+    C_rds_clock_multiply: integer := 228;
+    C_rds_clock_divide: integer := 3125;
     -- true: spend more LUTs to use 32-point sinewave and multiply 
     -- false: save LUTs, use 4-point multiplexer, no multiply
     C_fine_subc: boolean := false
 );
 port (
-    clk_25m: in std_logic;
+    -- system clock, RDS verified working at 25 MHz
+    -- for different clock change multiply/divide
+    clk: in std_logic;
     pcm_in: in signed(15 downto 0); -- from tone generator
     pcm_out: out signed(15 downto 0); -- to FM transmitter
     tone_out: out std_logic
@@ -71,14 +78,12 @@ x"3a",x"2e",x"22",x"18",x"0f",x"08",x"03",x"01",x"01",x"03",x"08",x"0f",x"18",x"
     signal S_subc_wav_value: signed(7 downto 0);
     signal S_subc_pcm: signed(7 downto 0); -- 8 bit ADC value for 19kHz pilot sine wave
 
-    signal S_strobe_1M824: std_logic;
-    
-    constant C_clkdiv_bits: integer := 20; -- enough for 1M counts
-    signal R_rds_t_ps: std_logic_vector(C_clkdiv_bits-1 downto 0); -- RDS timer in picoseconds (20 bit max range 1e6 ps)
-    constant C_rds_clock_in_period: std_logic_vector(C_clkdiv_bits-1 downto 0) := 40000; -- 40 ns = 40000 ps = 25 MHz
-    -- constant C_rds_clock_in_period: std_logic_vector(C_clkdiv_bits-1 downto 0) := 400; -- 100x slower for audible debug
-    constant C_rds_clock_out_period: std_logic_vector(C_clkdiv_bits-1 downto 0) := 548246; -- 548245.6 ps = 1.824 MHz -> 57 kHz
-    signal R_rds_strobe: std_logic; -- 1.824 MHz strobe signal
+    -- clock multiply must be smaller than clock divide
+    -- calculate number of bits for clock divide counter
+    -- 1 bit more than clock divide number
+    constant C_rds_clkdiv_bits: integer := 1+integer(ceil((log2(real(C_rds_clock_divide)))+1.0E-16));
+    signal R_rds_clkdiv: std_logic_vector(C_rds_clkdiv_bits-1 downto 0); -- RDS timer in picoseconds (20 bit max range 1e6 ps)
+    signal S_rds_strobe: std_logic; -- 1.824 MHz strobe signal
 begin
     -- generate 1.824 MHz RDS strobe
     -- RDS needs 57 kHz carrier wave.
@@ -88,47 +93,35 @@ begin
     -- change state on falling edge, so strobe level is
     -- stable when compared at rising edge
     internal_strobe: if not C_external_strobe generate
-    process(clk_25m)
+    process(clk)
     begin
-      if falling_edge(clk_25m) then
-        if R_rds_t_ps < C_rds_clock_out_period  then
-          -- add 40ns (1/25MHz)
-          R_rds_t_ps <= R_rds_t_ps + C_rds_clock_in_period;
-          R_rds_strobe <= '0';
+      if falling_edge(clk) then
+        -- MSB bit is mostly 0 and for one cycle becomes 1
+        -- small number is added each cycle.
+        -- as soon as MSB is detected as 1,
+        -- a large number is subtracted so 
+        -- MSB again becomes 0
+        if R_rds_clkdiv(C_rds_clkdiv_bits-1) = '0' then
+          -- add clock multiply
+          R_rds_clkdiv <= R_rds_clkdiv + C_rds_clock_multiply;
         else
-          -- add 40ns (1/25MHz) as always and step back one out-period
-          R_rds_t_ps <= R_rds_t_ps + C_rds_clock_in_period - C_rds_clock_out_period;
-          R_rds_strobe <= '1';
+          -- add clock multiply as always and subtract clock divide
+          R_rds_clkdiv <= R_rds_clkdiv + C_rds_clock_multiply - C_rds_clock_divide;
         end if;
       end if;
     end process;
+    -- MSB is used as output strobe signal
+    S_rds_strobe <= R_rds_clkdiv(C_rds_clkdiv_bits-1);
     end generate;
     
-    external_strobe: if C_external_strobe generate
-    -- strange, why this doesn't work?
-    -- it creates the same frequency, but if
-    -- R_rds_strobe is replaced with this external strube
-    -- and passed to RDS modulator 
-    -- then RDS text is not received
-    clk1M824: entity work.strobe
-    generic map(
-      clk_in_hz => 3125,   -- Hz (25 MHz)
-      strobe_out_hz => 228 -- Hz (1.824 MHz)
-    )
-    port map(
-      clk_in => clk_25m,
-      strobe_out => R_rds_strobe
-    );
-    end generate;
-
     -- ****************** PILOT 19kHz (only for stereo, not used for mono) *******************
     generate_pilot_19kHz: if C_stereo generate
-    process(clk_25m)
+    process(clk)
     begin
-        if rising_edge(clk_25m) then
+        if rising_edge(clk) then
             -- clocked at 25 MHz
             -- strobed at 1.824 MHz
-	    if R_rds_strobe = '1' then
+	    if S_rds_strobe = '1' then
 	        -- pilot 57/3 = 19 kHz generation
 	        if R_pilot_cdiv = 0 then
 	          R_pilot_cdiv <= 2;
@@ -154,12 +147,12 @@ begin
 
     -- ****************** SUBCARRIER 57kHz **************************
     fine_subcarrier_sine: if C_fine_subc generate
-    process(clk_25m)
+    process(clk)
     begin
-        if rising_edge(clk_25m) then
+        if rising_edge(clk) then
             -- clocked at 25 MHz
             -- strobed at 1.824 MHz
-	    if R_rds_strobe = '1' then
+	    if S_rds_strobe = '1' then
               -- 57 kHz subcarrier generation
               -- using counter 0..31
               R_subc_counter <= R_subc_counter + 1;
@@ -178,12 +171,12 @@ begin
     -- ****************** END SUBCARRIER 57kHz **********************
 
     -- *********** RDS MODULATOR 57 kHz / 1187.5 Hz *****************
-    process(clk_25m)
+    process(clk)
     begin
-        if rising_edge(clk_25m) then
+        if rising_edge(clk) then
             -- clocked at 25 MHz
             -- strobed at 1.824 MHz
-	    if R_rds_strobe = '1' then
+	    if S_rds_strobe = '1' then
 	      -- divides by 32 to get 57 kHz subcarrier
 	      R_subc_cdiv <= R_subc_cdiv + 1;
 	      -- 0-47: divide by 48 to get 1187.5 Hz from 32-element lookup table
