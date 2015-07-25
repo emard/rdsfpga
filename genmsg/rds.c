@@ -47,6 +47,7 @@ struct {
 #define FILTER_SIZE (sizeof(waveform_biphase)/sizeof(float))
 #define SAMPLE_BUFFER_SIZE (SAMPLES_PER_BIT + FILTER_SIZE)
 
+int bitptr = 0;
 
 uint16_t offset_words[] = {0x0FC, 0x198, 0x168, 0x1B4};
 // We don't handle offset word C' here for the sake of simplicity
@@ -111,10 +112,16 @@ int get_rds_ct_group(uint16_t *blocks) {
    pattern. 'ps_state' and 'rt_state' keep track of where we are in the PS (0A) sequence
    or RT (2A) sequence, respectively.
 */
-void get_rds_group(int *buffer) {
+void get_rds_group(uint8_t *buffer) {
     static int state = 0;
     static int ps_state = 0;
     static int rt_state = 0;
+    int bitptr = 0; // pointer to a bit in the buffer
+
+    /* erase buffer */
+    for(int i = 0; i < BITS_PER_GROUP/8; i++)
+      buffer[i] = 0;
+
     uint16_t blocks[GROUP_LENGTH] = {rds_params.pi, 0, 0, 0};
     #ifdef DEBUG
     printf("state=%d ps_state=%d rt_state=%d\n", state, ps_state, rt_state);
@@ -152,11 +159,13 @@ void get_rds_group(int *buffer) {
         uint16_t block = blocks[i];
         uint16_t check = crc(block) ^ offset_words[i];
         for(int j=0; j<BLOCK_SIZE; j++) {
-            *buffer++ = ((block & (1<<(BLOCK_SIZE-1))) != 0);
+            buffer[bitptr/8] |= ((block & (1<<(BLOCK_SIZE-1))) != 0) << (7 - bitptr % 8);
+            bitptr++;
             block <<= 1;
         }
         for(int j=0; j<POLY_DEG; j++) {
-            *buffer++= ((check & (1<<(POLY_DEG-1))) != 0);
+            buffer[bitptr/8] |= ((check & (1<<(POLY_DEG-1))) != 0) << (7 - bitptr % 8);
+            bitptr++;
             check <<= 1;
         }
     }

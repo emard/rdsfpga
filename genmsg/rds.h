@@ -40,6 +40,6 @@ extern void set_rds_pi(uint16_t pi_code);
 extern void set_rds_rt(char *rt);
 extern void set_rds_ps(char *ps);
 extern void set_rds_ta(int ta);
-extern void get_rds_group(int *buffer);
+extern void get_rds_group(uint8_t *buffer);
 
 #endif /* RDS_H */

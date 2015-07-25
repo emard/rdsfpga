@@ -33,7 +33,7 @@
 
 /* Simple test program */
 int main(int argc, char **argv) {
-    static int bit_buffer[BITS_PER_GROUP];
+    static uint8_t bit_buffer[BITS_PER_GROUP/8];
     uint16_t pi;
     char *ps, *rt;
 
@@ -63,22 +63,10 @@ int main(int argc, char **argv) {
     printf("constant rds_msg_map: rds_msg_type := (\n");
     for(int i = 0; i < NGROUPS; i++)
     {
-                get_rds_group(bit_buffer);
-                for(int j = 0; j < BITS_PER_GROUP; j += 8)
-                {
-                  uint8_t gbyte = 0;
-                  for(int k = 0; k < 8; k++)
-                  {
-                    gbyte <<= 1;
-                    if(bit_buffer[j+k])
-                      gbyte |= 1;
-                  }
-                  printf("x\"%02x\"", gbyte);
-                  // vhdl syntax: no last comma
-                  // if(i != NGROUPS-1 || j != BITS_PER_GROUP-8)
-                    printf(",");
-                }
-                printf("\n");
+      get_rds_group(bit_buffer);
+      for(int j = 0; j < BITS_PER_GROUP/8; j++)
+        printf("x\"%02x\",", bit_buffer[j]);
+      printf("\n");
     }
     printf("others => (others => '0')\n");
     printf(");\n");
