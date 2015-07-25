@@ -2,6 +2,10 @@
 -- (c) Davor Jadrijevic
 -- LICENSE=BSD
 
+-- this module will circulate memory address 0-511
+-- memory should provide 8-bit data
+-- MSB (bit 7) is sent first, LSB (bit 0) sent last
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_arith.all;
@@ -9,7 +13,7 @@ use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
-use work.message.all; -- RDS message in file message.vhd
+-- use work.message.all; -- RDS message in file message.vhd
 
 entity rds is
 generic (
@@ -28,6 +32,8 @@ port (
     -- system clock, RDS verified working at 25 MHz
     -- for different clock change multiply/divide
     clk: in std_logic;
+    addr: out std_logic_vector(8 downto 0); -- memory address 512 bytes
+    data: in std_logic_vector(7 downto 0); -- memory data 8 bit
     pcm_in: in signed(15 downto 0); -- from tone generator
     pcm_out: out signed(15 downto 0); -- to FM transmitter
     tone_out: out std_logic
@@ -37,7 +43,7 @@ end rds;
 architecture RTL of rds is
     -- RDS related registers
     -- get length of RDS message (file message.vhd)
-    constant C_rds_msg_len: integer := rds_msg_map'length;
+    -- constant C_rds_msg_len: integer := rds_msg_map'length;
 
     -- DBPSK waveform is used to modulate RDS at 1187.5 Hz
     -- and to generate sine wave for 57kHz subcarrier
@@ -54,10 +60,11 @@ x"3a",x"2e",x"22",x"18",x"0f",x"08",x"03",x"01",x"01",x"03",x"08",x"0f",x"18",x"
     );
     signal R_rds_cdiv: std_logic_vector(5 downto 0); -- 6-bit divisor 0..47
     signal R_rds_pcm: signed(7 downto 0); -- 8 bit ADC value for RDS waveform
-    signal R_rds_msg_index: std_logic_vector(15 downto 0); -- 16 bit index for message
+    signal R_rds_msg_index: std_logic_vector(8 downto 0); -- 9 bit index for message
     signal R_rds_byte: std_logic_vector(7 downto 0); -- current byte to send
     signal R_rds_bit_index: std_logic_vector(2 downto 0); -- current bit index 0..7
     signal R_rds_bit: std_logic; -- current bit to send
+    signal S_rds_bit: std_logic; -- current bit to send
     signal R_rds_phase: std_logic; -- current phase 0:(+) 1:(-)
     signal R_rds_counter: std_logic_vector(4 downto 0); -- 5-bit wav counter 0..31
     signal S_rds_sign: std_logic; -- current sign of waveform 0:(+) 1:(-)
@@ -170,6 +177,8 @@ begin
     -- *************** END FINE SUBCARRIER 57kHz ********************
 
     -- *********** RDS MODULATOR 57 kHz / 1187.5 Hz *****************
+    addr <= R_rds_msg_index; -- address of data to read
+    R_rds_bit <= R_rds_byte(7); -- MSB bit to send
     process(clk)
     begin
         if rising_edge(clk) then
@@ -200,11 +209,16 @@ begin
                      -- for next clock cycle prepare next byte
                      -- (byte sending start at MSB bit pos 7)
                      R_rds_msg_index <= R_rds_msg_index + 1;
-                     if R_rds_msg_index >= (C_rds_msg_len-1) then
-                       R_rds_msg_index <= 0;
-                     end if;
+                     --if R_rds_msg_index >= (C_rds_msg_len-1) then
+                     --  R_rds_msg_index <= 0;
+                     --end if;
                   end if;
-                  R_rds_bit <= rds_msg_map(conv_integer(R_rds_msg_index))(conv_integer(R_rds_bit_index));
+                  if R_rds_bit_index = 7 then
+                    R_rds_byte <= data; -- data, new byte
+                  else
+                    R_rds_byte <= R_rds_byte(6 downto 0) & "0"; -- shift 1 bit left
+                  end if;
+                  -- R_rds_bit <= rds_msg_map(conv_integer(R_rds_msg_index))(conv_integer(R_rds_bit_index));
                 end if;
               else
                 R_rds_cdiv <= R_rds_cdiv - 1; -- countdown from 47 to 0

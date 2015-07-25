@@ -55,13 +55,44 @@ module main(
     .code(midi),
     .pcm_out(tone_pcm)
   );
-  
+
+  /* RAM storage for RDS message */
+  wire [8:0] rds_msg_addr;
+  wire [7:0] rds_msg_data;
+  wire [7:0] cpu_writes_data;
+  assign cpu_writes_data = 0;
+  wire [7:0] cpu_reads_data;
+
+  bram_rds msg_store(
+    .clk(clk_25MHz),
+    .imem_addr(rds_msg_addr),
+    .imem_data_out(rds_msg_data)
+    /*
+    .dmem_addr(0),
+    .dmem_byte_sel(0),
+    .dmem_data_in(cpu_writes_data),
+    .dmem_data_out(cpu_reads_data),
+    .dmem_write(0)
+    */
+  );
+  /*
+  bram_rds msg_store(
+    .imem_addr(rds_msg_addr),
+    .imem_data_out(rds_msg_data)
+  );
+  */
+
+  // assign rds_msg_data[7:0] = rds_msg_addr[7:0];  
+
   wire signed [15:0] mix_rds_pcm;
   rds mixer(
     .clk(clk_25MHz),
+    .addr(rds_msg_addr),
+    .data(rds_msg_data),
     .pcm_in(tone_pcm),
     .pcm_out(mix_rds_pcm)
   );
+  
   
   /* 250 MHz clock needed for the transmitter */
   wire clk_250MHz;
