@@ -27,5 +27,7 @@ Christophe Jacquet, F8FTK RDS for Raspberry PI
 Bit message generator in C code copypasted from
 https://github.com/ChristopheJacquet/PiFmRds
 
-OOna Raisonen RDS receiver "redsea" for RTL-SDR
+Oona Räisänen OH2EIQ
+RDS receiver "redsea" for RTL-SDR
 used as receiver and for debugging
+https://github.com/windytan/redsea
