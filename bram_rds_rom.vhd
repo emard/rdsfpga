@@ -53,12 +53,10 @@ architecture x of bram_rds is
 begin
    imem_data_out <= ibram_0;
 
---   process(clk)
---   begin
---	if falling_edge(clk) then
---	  ibram_0 <= bram_0(conv_integer(imem_addr));
---	end if;
---   end process;
-
-   ibram_0 <= bram_0(conv_integer(imem_addr));
+   process(clk)
+   begin
+     if falling_edge(clk) then
+       ibram_0 <= bram_0(conv_integer(imem_addr));
+     end if;
+   end process;
 end x;
