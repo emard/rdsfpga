@@ -2,6 +2,12 @@
 -- (c) Marko Zec
 -- LICENSE=BSD
 
+-- FM RADIO 87-108 kHz
+-- maximum frequency deviation is 75 kHz
+-- input pcm value has range -32767..+32767
+-- and corresponds to frequency deviation
+-- of 2x pcm value -65536 .. +65536 Hz
+
 library IEEE;
 use IEEE.std_logic_1164.all;
 use ieee.std_logic_arith.all;
