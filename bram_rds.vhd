@@ -32,7 +32,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.STD_LOGIC_ARITH.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
 
--- use work.message.all; -- RDS message in file message.vhd
+use work.message.all; -- RDS message in file message.vhd
 
 entity bram_rds is
 --    generic(
@@ -51,11 +51,11 @@ entity bram_rds is
 end bram_rds;
 
 architecture x of bram_rds is
-    type bram_type is array(0 to (260 - 1))
-      of std_logic_vector(7 downto 0);
-    signal bram_0: bram_type;
+--    type bram_type is array(0 to (260 - 1))
+--      of std_logic_vector(7 downto 0);
+--    signal bram_0: bram_type;
 
-    -- signal bram_0: rds_msg_type := rds_msg_map;
+    signal bram_0: rds_msg_type := rds_msg_map;
 
     -- Lattice Diamond attributes
     attribute syn_ramstyle: string;

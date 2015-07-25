@@ -75,24 +75,23 @@ module main(
     .dmem_write(0)
     */
   );
-  /*
-  bram_rds msg_store(
-    .imem_addr(rds_msg_addr),
-    .imem_data_out(rds_msg_data)
-  );
-  */
-
-  // assign rds_msg_data[7:0] = rds_msg_addr[7:0];  
 
   wire signed [15:0] mix_rds_pcm;
-  rds mixer(
+  rds
+  #(
+    .c_rds_msg_len(512), // bytes message (default 260)
+    // multiply/divide 25 MHz to produce 1.824 MHz
+    .c_rds_clock_multiply(228),
+    .c_rds_clock_divide(3125)
+  )
+  mixer
+  (
     .clk(clk_25MHz),
     .addr(rds_msg_addr),
     .data(rds_msg_data),
     .pcm_in(tone_pcm),
     .pcm_out(mix_rds_pcm)
   );
-  
   
   /* 250 MHz clock needed for the transmitter */
   wire clk_250MHz;
@@ -103,7 +102,8 @@ module main(
 
   /* transmit pwm tone to FM radio */  
   wire antenna;
-  fmgen fm_tx(
+  fmgen fm_tx
+  (
     .clk_25m(clk_25MHz),
     .clk_250m(clk_250MHz),
     .pcm_in(mix_rds_pcm),

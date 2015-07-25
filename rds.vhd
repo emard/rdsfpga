@@ -2,7 +2,7 @@
 -- (c) Davor Jadrijevic
 -- LICENSE=BSD
 
--- this module will circulate memory address 0-511
+-- this module will circulate memory address
 -- memory should provide 8-bit data
 -- MSB (bit 7) is sent first, LSB (bit 0) sent last
 
@@ -17,17 +17,17 @@ use ieee.math_real.all;
 
 entity rds is
 generic (
-    C_rds_msg_len: integer range 1 to 512 := 260; -- circlar message length in bytes
+    c_rds_msg_len: integer range 1 to 512 := 260; -- circlar message length in bytes
     -- we need to generate 1.824 MHz for RDS clock strobe
     -- input clock frequency * multiply / divide = 1.824 MHz
     -- example 25 MHz * 228 / 3125 = 1.824 MHz
-    C_rds_clock_multiply: integer := 228;
-    C_rds_clock_divide: integer := 3125;
+    c_rds_clock_multiply: integer := 228;
+    c_rds_clock_divide: integer := 3125;
     -- 2ch stereo is not yet implemented, only pilot generator
-    C_stereo: boolean := false; -- true: generate 19kHz pilot wave
+    c_stereo: boolean := false; -- true: generate 19kHz pilot wave
     -- true: spend more LUTs to use 32-point sinewave and multiply 
     -- false: save LUTs, use 4-point multiplexer, no multiply
-    C_fine_subc: boolean := false
+    c_fine_subc: boolean := false
 );
 port (
     -- system clock, RDS verified working at 25 MHz
@@ -263,7 +263,7 @@ begin
     with S_rds_sign & R_subc_cdiv(4 downto 3) select
     S_rds_coarse_pcm <= S_dbpsk_wav_value when "101" | "011",
                        -S_dbpsk_wav_value when "111" | "001",
-                        0         when others;
+                        0 when others;
     S_rds_mod_pcm <= S_rds_coarse_pcm * 64;
     -- 64 or 63 is the same from amplitude point of view
     -- 64 is more simple as it uses only bit shifting

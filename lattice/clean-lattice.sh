@@ -13,7 +13,7 @@ SYMLINK="lattice/ulx2s.lpf \
   enkoder.vhd \
   tonegen.vhd \
   message.vhd \
-  bram_rds_rom.vhd \
+  bram_rds.vhd \
   rds.vhd \
   fmgen.vhd \
   main.v"
