@@ -1,4 +1,4 @@
--- RDS and DBPSK modulation
+-- RDS modulator with DBPSK
 -- (c) Davor Jadrijevic
 -- LICENSE=BSD
 
@@ -13,11 +13,13 @@ use work.message.all; -- RDS message in file message.vhd
 
 entity rds is
 generic (
-    C_stereo: boolean := false; -- true: generate 19kHz pilot wave
+    -- we need to generate 1.824 MHz for RDS clock strobe
     -- input clock frequency * multiply / divide = 1.824 MHz
     -- example 25 MHz * 228 / 3125 = 1.824 MHz
     C_rds_clock_multiply: integer := 228;
     C_rds_clock_divide: integer := 3125;
+    -- 2ch stereo is not yet implemented, only pilot generator
+    C_stereo: boolean := false; -- true: generate 19kHz pilot wave
     -- true: spend more LUTs to use 32-point sinewave and multiply 
     -- false: save LUTs, use 4-point multiplexer, no multiply
     C_fine_subc: boolean := false
@@ -85,14 +87,12 @@ x"3a",x"2e",x"22",x"18",x"0f",x"08",x"03",x"01",x"01",x"03",x"08",x"0f",x"18",x"
     signal R_rds_clkdiv: std_logic_vector(C_rds_clkdiv_bits-1 downto 0); -- RDS timer in picoseconds (20 bit max range 1e6 ps)
     signal S_rds_strobe: std_logic; -- 1.824 MHz strobe signal
 begin
-    -- generate 1.824 MHz RDS strobe
+    -- generate 1.824 MHz RDS clock strobe
     -- RDS needs 57 kHz carrier wave.
     -- lookup table period length is 32 entries
     -- so we need strobe frequency of 32*57 kHz = 1.824 MHz
-    -- or period of 548245.6 ps
     -- change state on falling edge, so strobe level is
     -- stable when compared at rising edge
-    internal_strobe: if not C_external_strobe generate
     process(clk)
     begin
       if falling_edge(clk) then
@@ -112,7 +112,6 @@ begin
     end process;
     -- MSB is used as output strobe signal
     S_rds_strobe <= R_rds_clkdiv(C_rds_clkdiv_bits-1);
-    end generate;
     
     -- ****************** PILOT 19kHz (only for stereo, not used for mono) *******************
     generate_pilot_19kHz: if C_stereo generate
@@ -250,7 +249,7 @@ begin
     S_rds_coarse_pcm <= S_dbpsk_wav_value when "101" | "011",
                        -S_dbpsk_wav_value when "111" | "001",
                         0         when others;
-    S_rds_mod_pcm <= S_rds_coarse_pcm * 64; -- signed multiply by 64
+    S_rds_mod_pcm <= S_rds_coarse_pcm * 64;
     -- 64 or 63 is the same from amplitude point of view
     -- 64 is more simple as it uses only bit shifting
     -- S_rds_mod_pcm range: 63*64 = (-4032 .. +4032)
