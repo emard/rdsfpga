@@ -4,7 +4,7 @@ This code comes complete with FM transmitter.
 No external components are needed, not even antenna
 if FPGA is 1m close to the receiver.
 
-Tune FM radio to 100 MHz (or change freq in main.v)
+Tune FM radio to 108 MHz (or change freq in main.v)
 and RDS example text "TEST1234" should appear.
 
 There's a simple audio tone synth, pressing
