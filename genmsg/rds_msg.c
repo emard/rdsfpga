@@ -34,16 +34,21 @@
 /* Simple test program */
 int main(int argc, char **argv) {
     static int bit_buffer[BITS_PER_GROUP];
+    uint16_t pi;
+    char *ps, *rt;
 
     if(argc < 4) {
         fprintf(stderr, "Error: missing argument.\n");
-        fprintf(stderr, "Syntax: rds_wav <pid 16 bit dec/hex> <station name 1-8 chars> <message 1-64 chars>\n");
+        fprintf(stderr, "Syntax: rds_wav PI \"station 1-8 chars\" \"message 1-64 chars\"\n");
+        fprintf(stderr, "Example: rds_wav 0x1234 \"TEST1234\" \"LONG MESSAGE\"\n");
         return EXIT_FAILURE;
     }
-    
-    set_rds_pi(strtoul(argv[1], NULL, 0));
-    set_rds_ps(argv[2]);
-    set_rds_rt(argv[3]);
+    pi = strtoul(argv[1], NULL, 0);
+    ps = argv[2];
+    rt = argv[3];
+    set_rds_pi(pi);
+    set_rds_ps(ps);
+    set_rds_rt(rt);
     printf("-- automatically generated with rds_msg\n");
     printf("library ieee;\n");
     printf("use ieee.std_logic_1164.all;\n");
@@ -52,6 +57,9 @@ int main(int argc, char **argv) {
     printf("use ieee.numeric_std.all;\n");
     printf("package message is\n");
     printf("type rds_msg_type is array(0 to %d) of std_logic_vector(7 downto 0);\n", NGROUPS*13-1);
+    printf("-- PI=0x%04X\n", pi);
+    printf("-- PS=\"%s\"\n", ps);
+    printf("-- RT=\"%s\"\n", rt);
     printf("constant rds_msg_map: rds_msg_type := (\n");
     for(int i = 0; i < NGROUPS; i++)
     {
