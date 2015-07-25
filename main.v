@@ -79,7 +79,7 @@ module main(
   wire signed [15:0] mix_rds_pcm;
   rds
   #(
-    .c_rds_msg_len(512), // bytes message (default 260)
+    .c_rds_msg_len(260), // bytes circular message (default 260, max 512)
     // multiply/divide 25 MHz to produce 1.824 MHz
     .c_rds_clock_multiply(228),
     .c_rds_clock_divide(3125)
