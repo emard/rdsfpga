@@ -12,6 +12,9 @@ rds.o: rds.c rds.h
 rds_msg.o: rds_msg.c
 	$(CC) $(CFLAGS) rds_msg.c
 
+message: rds_msg
+	./rds_msg 0xCAFE "TEST1234" "ABCDEFGHIJKLMNOPQRSTUVWXYZ    ABCDEFGHIJKLMNOPQRSTUVWXYZ    1234" > ../message-custom.vhd
+
 clean:
 	rm -f *.o *~
 

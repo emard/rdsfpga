@@ -68,11 +68,12 @@ int main(int argc, char **argv) {
                   }
                   printf("x\"%02x\"", gbyte);
                   // vhdl syntax: no last comma
-                  if(i != NGROUPS-1 || j != BITS_PER_GROUP-8)
+                  // if(i != NGROUPS-1 || j != BITS_PER_GROUP-8)
                     printf(",");
                 }
                 printf("\n");
     }
+    printf("others => (others => '0')\n");
     printf(");\n");
     printf("end message;\n");
 
