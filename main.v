@@ -102,14 +102,14 @@ module main(
     .CLKOP(clk_250MHz)
   );
 
-  /* transmit pwm tone to FM radio */  
+  /* transmit PCM signal to FM radio */
   wire antenna;
   fmgen fm_tx
   (
     .clk_25m(clk_25MHz),
     .clk_250m(clk_250MHz),
     .pcm_in(mix_rds_pcm),
-    .cw_freq(108000000), // Hz
+    .cw_freq(107000000), // Hz
     .fm_out(antenna)
   );
   
