@@ -38,12 +38,13 @@ entity bram_rds is
     port(
 	clk: in std_logic;
 	imem_addr: in std_logic_vector(8 downto 0);
-	imem_data_out: out std_logic_vector(7 downto 0)
---	dmem_write: in std_logic;
---	dmem_byte_sel: in std_logic_vector(3 downto 0);
---	dmem_addr: in std_logic_vector(31 downto 2);
---	dmem_data_in: in std_logic_vector(7 downto 0);
---	dmem_data_out: out std_logic_vector(7 downto 0)
+	imem_data_out: out std_logic_vector(7 downto 0);
+	-- dmem interface is not used, just a placeholder
+	dmem_write: in std_logic;
+	dmem_byte_sel: in std_logic_vector(3 downto 0);
+	dmem_addr: in std_logic_vector(31 downto 2);
+	dmem_data_in: in std_logic_vector(7 downto 0);
+	dmem_data_out: out std_logic_vector(7 downto 0)
     );
 end bram_rds;
 
