@@ -45,7 +45,7 @@ architecture RTL of rds is
     -- provide sufficient resolution for time and amplitude
     constant C_dbpsk_bits: integer := 8;
 
-    -- DBPSK lookup table
+    -- DBPSK wave lookup table
     type dbpsk_wav_type is array(0 to 47) of std_logic_vector(7 downto 0);
     constant dbpsk_wav_map: dbpsk_wav_type := (
 x"47",x"53",x"5e",x"67",x"6e",x"73",x"75",x"75",x"73",x"6f",x"6a",x"66",x"61",x"5e",x"5c",x"5c",
@@ -144,7 +144,7 @@ begin
     end generate;
     -- ****************** END PILOT 19kHz ***************************
 
-    -- ****************** SUBCARRIER 57kHz **************************
+    -- **************** FINE SUBCARRIER 57kHz ***********************
     fine_subcarrier_sine: if C_fine_subc generate
     process(clk)
     begin
@@ -167,7 +167,7 @@ begin
            else  -S_subc_wav_value;
     -- S_subc_pcm range: (-63 .. +63)
     end generate;
-    -- ****************** END SUBCARRIER 57kHz **********************
+    -- *************** END FINE SUBCARRIER 57kHz ********************
 
     -- *********** RDS MODULATOR 57 kHz / 1187.5 Hz *****************
     process(clk)
@@ -176,7 +176,7 @@ begin
             -- clocked at 25 MHz
             -- strobed at 1.824 MHz
 	    if S_rds_strobe = '1' then
-	      -- divides by 32 to get 57 kHz subcarrier
+	      -- divide by 32 for 57 kHz coarse subcarrier
 	      R_subc_cdiv <= R_subc_cdiv + 1;
 	      -- 0-47: divide by 48 to get 1187.5 Hz from 32-element lookup table
               if R_rds_cdiv = 0 then
