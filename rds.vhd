@@ -265,9 +265,14 @@ begin
                        -S_dbpsk_wav_value when "111" | "001",
                         0 when others;
     S_rds_mod_pcm <= S_rds_coarse_pcm * 64;
-    -- 64 or 63 is the same from amplitude point of view
-    -- 64 is more simple as it uses only bit shifting
-    -- S_rds_mod_pcm range: 63*64 = (-4032 .. +4032)
+    -- multiply with 2^n because it is
+    -- simple, uses only bit shifting
+    -- for *64: S_rds_mod_pcm range: 63*64 = (-4032 .. +4032)
+    -- experimental results for various RDS modulation levels
+    -- received with redsea RTL-SDR receiver:
+    -- *16 works but RDS reception becomes weaker, CRC errors
+    -- *32, *64, *128 all work mostly the same
+    -- *256 doesn't work (overmodulation)
     end generate;
     -- ****************** END RDS MODULATOR **************
 
