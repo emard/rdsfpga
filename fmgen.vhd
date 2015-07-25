@@ -1,3 +1,7 @@
+-- FM transmitter
+-- (c) Marko Zec
+-- LICENSE=BSD
+
 library IEEE;
 use IEEE.std_logic_1164.all;
 use ieee.std_logic_arith.all;

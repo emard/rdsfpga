@@ -1,7 +1,9 @@
 //-----------------------------------------------------
+// (c) Davor Jadrijevic
+// License=BSD
 // Tone generator with FM output
-// to change default frequency (100MHz)
-// modify fmgen.vhd constant cw_freq
+// to change default frequency (100.0MHz)
+// edit this file, see fmgen instance
 //-----------------------------------------------------
 module main(
   clk_25MHz, // Clock input ot the design
@@ -107,7 +109,7 @@ module main(
     .clk_25m(clk_25MHz),
     .clk_250m(clk_250MHz),
     .pcm_in(mix_rds_pcm),
-    .cw_freq(108100000), // Hz slightly off-range
+    .cw_freq(100000000), // Hz
     .fm_out(antenna)
   );
   

@@ -1,4 +1,4 @@
--- Tone with MIDI frequencies
+-- Audio Tone synth with MIDI frequencies
 -- (c) Marko Zec
 -- LICENSE=BSD
 
