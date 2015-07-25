@@ -58,7 +58,7 @@ module main(
   
   wire signed [15:0] mix_rds_pcm;
   rds mixer(
-    .clk_25m(clk_25MHz),
+    .clk(clk_25MHz),
     .pcm_in(tone_pcm),
     .pcm_out(mix_rds_pcm)
   );
