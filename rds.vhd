@@ -36,8 +36,7 @@ port (
     addr: out std_logic_vector(8 downto 0); -- memory address 512 bytes
     data: in std_logic_vector(7 downto 0); -- memory data 8 bit
     pcm_in: in signed(15 downto 0); -- from tone generator
-    pcm_out: out signed(15 downto 0); -- to FM transmitter
-    tone_out: out std_logic
+    pcm_out: out signed(15 downto 0) -- to FM transmitter
 );
 end rds;
 
