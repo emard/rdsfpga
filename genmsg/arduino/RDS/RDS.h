@@ -21,25 +21,30 @@ class RDS {
   public:
     RDS();
 
-    void set_rds_pi(uint16_t pi_code);
-    void set_rds_rt(char *rt);
-    void set_rds_ps(char *ps);
-    void set_rds_ta(int ta);
+    void set_pi(uint16_t pi_code);
+    void set_rt(char *rt);
+    void set_ps(char *ps);
+    void set_ta(int ta);
 
-    void get_rds_group(uint8_t *buffer);
-    void update();
+    // get_group() converts text message to binary
+    // format suitable for sending
+    void get_group(uint8_t *buffer); // convert message to binary
+
+    // send() copies binary to hardware transmission buffer
+    void send();
 
   private:
-  
+    // calculates checksums for binary format  
     uint16_t crc(uint16_t block);
 
-    uint16_t pi;
-    int ta;
-    char ps[PS_LENGTH];
-    char rt[RT_LENGTH];
+    // internal RDS message in cleartext
+    uint16_t pi; // program ID
+    int ta; // traffic announcement
+    char ps[PS_LENGTH]; // short 8-char text shown as station name
+    char rt[RT_LENGTH]; // long 64-char text
 
+    // some constants needed to compose binary format
     const uint16_t offset_words[4] = {0x0FC, 0x198, 0x168, 0x1B4};
     // We don't handle offset word C' here for the sake of simplicity
-
 };
 #endif

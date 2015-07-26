@@ -1,9 +1,9 @@
 #include <string.h>
 #include "RDS.h"
 
+/* constructor does nothing */
 RDS::RDS()
 {
-  
 }
 
 /* Classical CRC computation */
@@ -29,7 +29,7 @@ uint16_t RDS::crc(uint16_t block) {
    pattern. 'ps_state' and 'rt_state' keep track of where we are in the PS (0A) sequence
    or RT (2A) sequence, respectively.
 */
-void RDS::get_rds_group(uint8_t *buffer) {
+void RDS::get_group(uint8_t *buffer) {
     static int state = 0;
     static int ps_state = 0;
     static int rt_state = 0;
@@ -48,7 +48,7 @@ void RDS::get_rds_group(uint8_t *buffer) {
     // Generate block content
     #if 0
     if(clock_enabled)
-      clock_generated = get_rds_ct_group(blocks);
+      clock_generated = get_ct_group(blocks);
     #endif        
     if( clock_generated == 0 )
     // CT (clock time) if enabled has priority on other group types
@@ -89,7 +89,7 @@ void RDS::get_rds_group(uint8_t *buffer) {
     }
 }
 
-void RDS::update(void)
+void RDS::send(void)
 {
     volatile uint32_t *rdsmem = (volatile uint32_t *)0xA0000000;
     uint8_t bit_buffer[BITS_PER_GROUP/8];
@@ -98,30 +98,30 @@ void RDS::update(void)
 
     for(i = 0; i < ngroups; i++)
     {
-      get_rds_group(bit_buffer);
+      get_group(bit_buffer);
       for(j = 0; j < BITS_PER_GROUP/8; j++)
         rdsmem[k++] = bit_buffer[j];
     }
 }
 
-void RDS::set_rds_pi(uint16_t pi_code) {
+void RDS::set_pi(uint16_t pi_code) {
     this->pi = pi_code;
 }
 
-void RDS::set_rds_rt(char *rt) {
+void RDS::set_rt(char *rt) {
     strncpy(this->rt, rt, 64);
     for(int i=0; i<64; i++) {
         if(this->rt[i] == 0) this->rt[i] = 32;
     }
 }
 
-void RDS::set_rds_ps(char *ps) {
+void RDS::set_ps(char *ps) {
     strncpy(this->ps, ps, 8);
     for(int i=0; i<8; i++) {
         if(this->ps[i] == 0) this->ps[i] = 32;
     }
 }
 
-void RDS::set_rds_ta(int ta) {
+void RDS::set_ta(int ta) {
     this->ta = ta;
 }
