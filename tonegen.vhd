@@ -250,10 +250,12 @@ begin
 	    R_time <= R_time + freq_map(conv_integer(R_code));
             -- index: take upper 8 bits (shift right 24 bits)
             -- value: sine_table(index)-0x8000 casted to signed number around 0
+            -- R_sin range -32767 .. +32767
 	    R_sin <= signed(sin_map(conv_integer(R_time(31 downto 24)))-x"8000");
 	    R_mul <= R_vol * R_sin; -- signed multiplication
 
 	    R_tone_pcm <= R_mul(31 downto 16);
+	    -- R_tone_pcm range: -16383 .. 16383
 	    R_pwm <= R_pwm + (R_pwm(16) & R_tone_pcm);
 	    
         end if;

@@ -91,7 +91,8 @@ module main(
     .clk(clk_25MHz),
     .addr(rds_msg_addr),
     .data(rds_msg_data),
-    .pcm_in(tone_pcm),
+    .pcm_in_left(tone_pcm),
+    .pcm_in_right(tone_pcm),  // or 16'd0
     .pcm_out(mix_rds_pcm)
   );
   
@@ -106,10 +107,10 @@ module main(
   wire antenna;
   fmgen fm_tx
   (
-    .clk_sys(clk_25MHz),
-    .clk_fmgen(clk_250MHz),
+    .clk_pcm(clk_25MHz),
+    .clk_dds(clk_250MHz),
     .pcm_in(mix_rds_pcm),
-    .cw_freq(104000000), // Hz
+    .cw_freq(108000000), // Hz
     .fm_out(antenna)
   );
   
