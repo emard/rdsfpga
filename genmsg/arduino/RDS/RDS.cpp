@@ -161,7 +161,7 @@ void RDS::get_group(uint8_t *buffer) {
 
 void RDS::send(void)
 {
-    volatile uint32_t *rdsmem = (volatile uint32_t *)0xA0000000;
+    volatile uint32_t *rdsmem = (volatile uint32_t *)RDS_ADDRESS;
     uint8_t bit_buffer[BITS_PER_GROUP/8];
     int i, j, k = 0;
     int ngroups = 20;
