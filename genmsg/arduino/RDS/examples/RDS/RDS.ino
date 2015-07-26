@@ -1,5 +1,7 @@
 /*
 This is a test program that dynamically updates RDS message.
+AUTHOR=EMARD
+LICENSE=GPL
 */
 
 #include <RDS.h>
