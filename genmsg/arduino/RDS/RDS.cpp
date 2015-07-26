@@ -1,3 +1,29 @@
+/*  Original code from:
+    
+    PiFmRds - FM/RDS transmitter for the Raspberry Pi
+    Copyright (C) 2014 Christophe Jacquet, F8FTK
+    
+    See https://github.com/ChristopheJacquet/PiFmRds
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    
+    Modification: by EMARD
+    deleted everything except RDS bit generator
+    converted to c++ for arduino, renamed functions
+    
+*/
+
 #include <string.h>
 #include "RDS.h"
 
@@ -24,7 +50,51 @@ uint16_t RDS::crc(uint16_t block) {
     return crc;
 }
 
-/* Creates an RDS group. This generates sequences of the form 4x 0A, 16x 2A, etc.
+#if 0
+// this works on unix
+// Arduino has no time.h struct
+// the low-cost hardware also has no RTC
+
+/* Possibly generates a CT (clock time) group if the minute has just changed
+   Returns 1 if the CT group was generated, 0 otherwise
+*/
+int RDS::get_ct_group(uint16_t *blocks) {
+    static int latest_minutes = -1;
+
+    // Check time
+    time_t now;
+    struct tm *utc;
+    
+    now = time (NULL);
+    utc = gmtime (&now);
+
+    if(utc->tm_min != latest_minutes) {
+        // Generate CT group
+        latest_minutes = utc->tm_min;
+        
+        int l = utc->tm_mon <= 1 ? 1 : 0;
+        int mjd = 14956 + utc->tm_mday + 
+                        (int)((utc->tm_year - l) * 365.25) +
+                        (int)((utc->tm_mon + 2 + l*12) * 30.6001);
+        
+        blocks[1] = 0x4400 | (mjd>>15);
+        blocks[2] = (mjd<<1) | (utc->tm_hour>>4);
+        blocks[3] = (utc->tm_hour & 0xF)<<12 | utc->tm_min<<6;
+        
+        utc = localtime(&now);
+        
+        int offset = utc->tm_gmtoff / (30 * 60);
+        blocks[3] |= abs(offset);
+        if(offset < 0) blocks[3] |= 0x20;
+        
+        //printf("Generated CT: %04X %04X %04X\n", blocks[1], blocks[2], blocks[3]);
+        return 1;
+    } else return 0;
+}
+#endif
+
+/* By successively calling this it will each time create another RDS group. 
+   This generates sequences of the form 4x 0A, 16x 2A, etc.
    The pattern is of length 20, the variable 'state' keeps track of where we are in the
    pattern. 'ps_state' and 'rt_state' keep track of where we are in the PS (0A) sequence
    or RT (2A) sequence, respectively.

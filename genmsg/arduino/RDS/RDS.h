@@ -1,3 +1,29 @@
+/*  Original code from:
+    
+    PiFmRds - FM/RDS transmitter for the Raspberry Pi
+    Copyright (C) 2014 Christophe Jacquet, F8FTK
+    
+    See https://github.com/ChristopheJacquet/PiFmRds
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    
+    Modification: by EMARD
+    deleted everything except RDS bit generator
+    converted to c++ for arduino, renamed functions
+    
+*/
+
 #ifndef _RDS_h
 #define _RDS_h
 
@@ -43,7 +69,7 @@ class RDS {
     char ps[PS_LENGTH]; // short 8-char text shown as station name
     char rt[RT_LENGTH]; // long 64-char text
 
-    // some constants needed to compose binary format
+    // some constants required to compose binary format
     const uint16_t offset_words[4] = {0x0FC, 0x198, 0x168, 0x1B4};
     // We don't handle offset word C' here for the sake of simplicity
 };
