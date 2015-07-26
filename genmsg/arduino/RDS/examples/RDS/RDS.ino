@@ -15,9 +15,9 @@ void setup() {
   for(i = 0; i < sizeof(rt)-1; i++)
     rt[i] = '@'+i; // ascii map
   /* Setup initial RDS text */
-  rds.set_rds_pi(pi);
-  rds.set_rds_ps(ps);
-  rds.set_rds_rt(rt);
+  rds.set_pi(pi); // station numeric ID
+  rds.set_ps(ps); // 8-char text, displayed as station name
+  rds.set_rt(rt); // 64-char text, not every radio displays it
   Serial.begin(115200);
 }
 
@@ -26,14 +26,14 @@ void loop()
   static uint8_t number;
 
   snprintf(ps, sizeof(ps), "TEST%04d", number % 10000);
-  snprintf(rt, sizeof(rt), "%05d ZZZZZZZZZZZZZZZ", number % 100000);
+  snprintf(rt, sizeof(rt), "%05d Zzz...", number % 100000);
 
   // apply local strings to rds class
-  rds.set_rds_ps(ps);
-  rds.set_rds_ps(rt);
+  rds.set_ps(ps);
+  rds.set_rt(rt);
 
   // strings changed but not yet transmitting
-  rds.update(); // update transmitter buffer
+  rds.send(); // send (update transmitter buffer)
 
   // print actual status on serial
   Serial.print("0x");
@@ -43,6 +43,6 @@ void loop()
   Serial.print(" ");
   Serial.println(rt);
 
-  delay(1000); // wait 1 second
+  delay(2000); // wait 2 seconds
   number++; // increment number
 }
