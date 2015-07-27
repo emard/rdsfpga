@@ -10,4 +10,4 @@ wav.vhd: wavtable.csv
 	./wav2vhdtab.py > $@
 
 clean:
-	rm -f $(VHDLS)
+	rm -f $(VHDLS) *~
