@@ -22,6 +22,7 @@ fm transmitter and audio midi synth copypasted
 
 N. G. Hubbard RDS transmitter for PIC microcontroller
 DBPSK waveform copypasted
+http://www.anotherurl.com/library/rds_formulae.htm
 
 Christophe Jacquet, F8FTK RDS for Raspberry PI
 Bit message generator in C code copypasted from
