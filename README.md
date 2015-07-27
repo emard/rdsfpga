@@ -31,3 +31,6 @@ Oona Räisänen OH2EIQ
 RDS receiver "redsea" for RTL-SDR
 used as receiver and for debugging
 https://github.com/windytan/redsea
+
+SoftFM
+https://github.com/jorisvr/SoftFM
