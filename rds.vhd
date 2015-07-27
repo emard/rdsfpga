@@ -58,6 +58,7 @@ architecture RTL of rds is
     30, 34, 39, 45, 51, 57, 61, 63, 63, 61, 56, 49, 40, 30, 18,  6,
     -6,-18,-30,-40,-49,-56,-61,-63,-63,-61,-56,-49,-40,-30,-18, -6
     );
+    -- this function is just to cast integer type to signed type
     type T_dbpsk_wav_signed is array (0 to 47) of signed(C_dbpsk_bits-1 downto 0);
     function dpbsk_int2sign(x: T_dbpsk_wav_integer)
       return T_dbpsk_wav_signed is
