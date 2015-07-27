@@ -51,11 +51,19 @@ module main(
   assign led[6:0] = midi; // display midi with the leds
   
   /* convert midi code to PCM tone output */
-  wire signed [15:0] tone_pcm;
-  tonegen midi2tone(
+  wire signed [15:0] tone_pcm_left;
+  tonegen midi2tone_left(
     .clk_25m(clk_25MHz),
     .code(midi),
-    .pcm_out(tone_pcm)
+    .pcm_out(tone_pcm_left)
+  );
+
+  /* different tone midi+1 for right channel */
+  wire signed [15:0] tone_pcm_right;
+  tonegen midi2tone_right(
+    .clk_25m(clk_25MHz),
+    .code(midi+1),
+    .pcm_out(tone_pcm_right)
   );
 
   /* RAM storage for RDS message */
@@ -91,8 +99,8 @@ module main(
     .clk(clk_25MHz),
     .addr(rds_msg_addr),
     .data(rds_msg_data),
-    .pcm_in_left(tone_pcm),
-    .pcm_in_right(tone_pcm),  // or 16'd0
+    .pcm_in_left(tone_pcm_left),
+    .pcm_in_right(tone_pcm_right),  // use 16'd0 as zero input
     .pcm_out(mix_rds_pcm)
   );
   
