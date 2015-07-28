@@ -36,6 +36,7 @@ port (
     addr: out std_logic_vector(8 downto 0); -- memory address 512 bytes
     data: in std_logic_vector(7 downto 0); -- memory data 8 bit
     pcm_in_left, pcm_in_right: in signed(15 downto 0); -- from tone generator
+    debug: out std_logic_vector(31 downto 0);
     pcm_out: out signed(15 downto 0) -- to FM transmitter
 );
 end rds;
@@ -58,7 +59,6 @@ architecture RTL of rds is
     30, 34, 39, 45, 51, 57, 61, 63, 63, 61, 56, 49, 40, 30, 18,  6,
     -6,-18,-30,-40,-49,-56,-61,-63,-63,-61,-56,-49,-40,-30,-18, -6
     );
-    -- this function is just to cast integer type to signed type
     type T_dbpsk_wav_signed is array (0 to 47) of signed(C_dbpsk_bits-1 downto 0);
     function dpbsk_int2sign(x: T_dbpsk_wav_integer)
       return T_dbpsk_wav_signed is
@@ -100,7 +100,8 @@ architecture RTL of rds is
     signal S_pcm_stereo: signed(22 downto 0);
 
     signal R_subc_counter: std_logic_vector(4 downto 0) := (others => '0'); -- 5-bit wav counter 0..31
-    signal R_subc_cdiv: std_logic_vector(4 downto 0) := (others => '0'); -- divide to 57kHz
+    signal R_subc_cdiv: std_logic_vector(4 downto 0) := -- counter for 57kHz coarse subcarrier
+      std_logic_vector(to_unsigned(6, 5)); -- initial value 6 for phase adjust
     signal S_subc_wav_index: std_logic_vector(5 downto 0); -- 6-bit index used 0..47, max 63
     signal S_subc_wav_value: signed(C_dbpsk_bits-1 downto 0);
     signal S_subc_pcm: signed(C_dbpsk_bits-1 downto 0); -- 7 bit ADC value for 19kHz pilot sine wave
@@ -334,4 +335,9 @@ begin
              + S_pilot_pcm * 64 -- 16 is too weak, not sure of correct 19kHz pilot amplitude
              + S_rds_mod_pcm;
     end generate;
+
+    debug <= x"00" 
+           & "0" & std_logic_vector(S_stereo_pcm) 
+           & "0" & std_logic_vector(S_pilot_pcm)
+           & "0" & std_logic_vector(S_rds_coarse_pcm);
 end;
