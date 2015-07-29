@@ -1,5 +1,6 @@
 reset
-input_file = 'wavtable.csv'
+input_file = 'wavtable.csv' # original wav table
+# input_file = 'wavtable-dbpskgen.csv' # gnuplot generated (wave shape not 100% correct)
 
 # every 1::<first>::<last>
 

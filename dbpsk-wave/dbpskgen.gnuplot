@@ -1,7 +1,9 @@
 # this gnuplot file
 # tries to plot and generate dbpsk wav file
 # wave shape looks close but is different than
-# original costable.txt
+# original costable.txt / wavtable.csv
+
+# this needs fixing and further work
 
 reset
 
