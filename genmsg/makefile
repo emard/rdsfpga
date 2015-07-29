@@ -18,14 +18,15 @@ debianparts=$(debianproject) debian/DEBIAN/control debian/usr/share/doc/$(projec
 rds=rds
 objects=$(project).o $(parser).o $(rds).o
 includes=$(parser).h
+message=../message-custom.vhd
 
 all: $(project)
 
 $(parser).c: $(parser).ggo
-	gengetopt < $< --file-name=$(parser) # --unamed-opts
+	gengetopt < $< --file-name=$(parser) --unamed-opts="TEXT"
 
 $(parser).h: $(parser).ggo
-	gengetopt < $< --file-name=$(parser) # --unamed-opts
+	gengetopt < $< --file-name=$(parser) --unamed-opts="TEXT"
 
 $(parser).o: $(parser).c $(parser).h
 	gcc $(CFLAGS) -c $(parser).c # -DHAVE_CONFIG_H
@@ -38,6 +39,10 @@ $(project).o: $(project).c $(includes)
 
 $(project): $(objects)
 	gcc $(CFLAGS) $(CLIBS) $(objects) -o $@
+
+message: $(message)
+$(message): $(project)
+	./rdsmsg -i 0xCAFE --ps="TEST1234" --rt="ABCDEFGHIJKLMNOPQRSTUVWXYZ    ABCDEFGHIJKLMNOPQRSTUVWXYZ    1234" > $@
 
 $(debianproject): $(project)
 	strip $< -o $@
