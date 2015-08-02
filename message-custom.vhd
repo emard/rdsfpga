@@ -7,16 +7,16 @@ use ieee.numeric_std.all;
 package message is
 type rds_msg_type is array(0 to 259) of std_logic_vector(7 downto 0);
 -- PI=0xCAFE
--- STEREO=No
+-- STEREO=Yes
 -- TA=No
--- AF=108.0 MHz
+-- AF=107.9 MHz
 -- PS="TEST1234"
 -- RT="ABCDEFGHIJKLMNOPQRSTUVWXYZ    ABCDEFGHIJKLMNOPQRSTUVWXYZ    1234"
 constant rds_msg_map: rds_msg_type := (
-x"ca",x"fe",x"a0",x"01",x"00",x"2e",x"8e",x"1c",x"d4",x"d5",x"51",x"15",x"fb",
+x"ca",x"fe",x"a0",x"01",x"00",x"2e",x"8e",x"1c",x"c2",x"31",x"51",x"15",x"fb",
 x"ca",x"fe",x"a0",x"01",x"00",x"75",x"1c",x"dc",x"da",x"cd",x"4d",x"51",x"e9",
 x"ca",x"fe",x"a0",x"01",x"00",x"99",x"ac",x"dc",x"da",x"cc",x"c4",x"cb",x"c6",
-x"ca",x"fe",x"a0",x"01",x"00",x"c2",x"3c",x"dc",x"da",x"cc",x"cc",x"d2",x"51",
+x"ca",x"fe",x"a0",x"01",x"01",x"f7",x"ec",x"dc",x"da",x"cc",x"cc",x"d2",x"51",
 x"ca",x"fe",x"a0",x"09",x"00",x"14",x"74",x"14",x"20",x"59",x"0d",x"11",x"5d",
 x"ca",x"fe",x"a0",x"09",x"00",x"4f",x"e4",x"54",x"60",x"ed",x"1d",x"22",x"73",
 x"ca",x"fe",x"a0",x"09",x"00",x"a3",x"54",x"94",x"a1",x"31",x"2d",x"31",x"07",

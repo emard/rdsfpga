@@ -118,7 +118,7 @@ module main(
     .clk_pcm(clk_25MHz),
     .clk_dds(clk_250MHz),
     .pcm_in(mix_rds_pcm),
-    .cw_freq(108000000), // Hz
+    .cw_freq(107900000), // Hz
     .fm_out(antenna)
   );
   
