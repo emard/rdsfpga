@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
     printf("-- PI=0x%04X\n", pi);
     printf("-- STEREO=%s\n", options->stereo_given ? "Yes" : "No");
     printf("-- TA=%s\n", options->ta_given ? "Yes" : "No");
-    if(rds_params.afs)
+    if(rds_params.afs>0)
     {
       printf("-- AF=");
       for(int i = 0; i < rds_params.afs; i++)
