@@ -26,7 +26,7 @@ port (
         clk_pcm: in std_logic; -- PCM processing clock, any (e.g. 25 MHz)
 	clk_dds: in std_logic; -- DDS clock must be >2*cw_freq (e.g. 250 MHz)
 	cw_freq: in std_logic_vector(31 downto 0);
-	pcm_in: in signed(15 downto 0); -- FM swing +-2x this amplitude in Hz
+	pcm_in: in signed(15 downto 0); -- FM swing pcm_in * 4 Hz
 	fm_out: out std_logic
 );
 end fmgen;
@@ -69,7 +69,7 @@ begin
     process (clk_pcm)
     begin
 	if (rising_edge(clk_pcm)) then
-	    R_dds_mul_x1 <= cw_freq + std_logic_vector(resize((R_pcm-R_pcm_avg) & "0", 32)); -- "0" multiply by 2
+	    R_dds_mul_x1 <= cw_freq + std_logic_vector(resize((R_pcm-R_pcm_avg) & "00", 32)); -- "00" multiply by 4
 	end if;
     end process;
 	

@@ -198,7 +198,7 @@ architecture RTL of tonegen is
 
     constant C_attack: signed(15 downto 0) := 291;
     constant C_deccay: signed(15 downto 0) := 24;
-    constant C_maxvol: signed(15 downto 0) := 32767;
+    constant C_maxvol: signed(15 downto 0) := 25000;
     constant C_debounce: std_logic_vector(7 downto 0) := 0; -- require n identical readings, 0 to disable
 begin
     -- play tone on keyboard

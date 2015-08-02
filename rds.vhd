@@ -336,8 +336,8 @@ begin
     -- but we divide by 2 and hope for no clipping
     pcm_out <= (pcm_in_left/2 + pcm_in_right/2)
              + S_pcm_stereo(21 downto 6) -- normalize S_stereo_pcm, shift divide by 64
-             + S_pilot_pcm * 64 -- 16 is too weak, not sure of correct 19kHz pilot amplitude
-             + S_rds_mod_pcm;
+             + S_pilot_pcm * 32 -- 16 is too weak, not sure of correct 19kHz pilot amplitude
+             + S_rds_mod_pcm/2;
     end generate;
 
     debug <= x"00" 
