@@ -9,5 +9,8 @@ purpose "rdsmsg generates binary RDS message in VHDL file"
 
 #       long         short    description              type   default              required
 option  "pi"         i "Program ID"                    int    default="0x1234"     no
-option  "ps"         s "Main text (same as TEXT), 8 chars max"     string default="TEST1234"   no
-option  "rt"         t "Long text, 64 chars max"    string default="ABCDEFGHIJKL" no
+option  "ps"         d "Main display [TEXT], max 8"    string default="TEST1234"   no
+option  "rt"         l "Long display, max 64"          string default="ABCDEFGHIJKL" no
+option  "stereo"     s "Stereo"                        flag   off
+option  "ta"         t "Traffic Announcement"          flag   off
+option  "af"         f "AF frequency (MHz)"            float  default="100.0"      no

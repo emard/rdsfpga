@@ -28,20 +28,21 @@
 #include <stdlib.h>
 #include "rds.h"
 
-#define RT_LENGTH 64
-#define PS_LENGTH 8
 
-struct {
-    uint16_t pi;
-    int ta;
-    char ps[PS_LENGTH];
-    char rt[RT_LENGTH];
-} rds_params = { 0 };
+struct s_rds_params rds_params =
+{ 0x1234, // PI
+  0, // Stereo
+  0, // TA
+  -1, // number of AFs to follow, -1 to disable AF
+  {0,0,0,0,0,0,0}, // AFs 0..7, x0.1 MHz
+  "PS", // PS
+  "RT" // RT
+};
+
 /* Here, the first member of the struct must be a scalar to avoid a
    warning on -Wmissing-braces with GCC < 4.8.3 
    (bug: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53119)
 */
-
 
 #define SAMPLES_PER_BIT 192
 #define FILTER_SIZE (sizeof(waveform_biphase)/sizeof(float))
@@ -107,63 +108,28 @@ int get_rds_ct_group(uint16_t *blocks) {
     } else return 0;
 }
 
-/* Creates an RDS group. This generates sequences of the form 4x 0A, 16x 2A, etc.
-   The pattern is of length 20, the variable 'state' keeps track of where we are in the
-   pattern. 'ps_state' and 'rt_state' keep track of where we are in the PS (0A) sequence
-   or RT (2A) sequence, respectively.
-*/
-void get_rds_group(uint8_t *buffer) {
-    static int state = 0;
-    static int ps_state = 0;
-    static int rt_state = 0;
+// write block to the buffer and append the CRC
+void write_buf_crc(uint8_t buffer[], uint16_t blocks[])
+{
     int bitptr = 0; // pointer to a bit in the buffer
 
     /* erase buffer */
     for(int i = 0; i < BITS_PER_GROUP/8; i++)
       buffer[i] = 0;
 
-    uint16_t blocks[GROUP_LENGTH] = {rds_params.pi, 0, 0, 0};
-    #ifdef DEBUG
-    printf("state=%d ps_state=%d rt_state=%d\n", state, ps_state, rt_state);
-    #endif
-    int clock_enabled = 0;
-    int clock_generated = 0;
-    // Generate block content
-    if(clock_enabled)
-      clock_generated = get_rds_ct_group(blocks);
-        
-    if( clock_generated == 0 )
-    // CT (clock time) if enabled has priority on other group types
+    /* Calculate the checkword for each block and emit the bits */
+    for(int i=0; i<GROUP_LENGTH; i++)
     {
-        if(state < 4) {
-            blocks[1] = 0x0400 | ps_state;
-            if(rds_params.ta) blocks[1] |= 0x0010;
-            blocks[2] = 0xCDCD;     // no AF
-            blocks[3] = rds_params.ps[ps_state*2]<<8 | rds_params.ps[ps_state*2+1];
-            ps_state++;
-            if(ps_state >= 4) ps_state = 0;
-        } else { // state 4 .. 19
-            blocks[1] = 0x2400 | rt_state;
-            blocks[2] = rds_params.rt[rt_state*4+0]<<8 | rds_params.rt[rt_state*4+1];
-            blocks[3] = rds_params.rt[rt_state*4+2]<<8 | rds_params.rt[rt_state*4+3];
-            rt_state++;
-            if(rt_state >= 16) rt_state = 0;
-        }
-    
-        state++;
-        if(state >= 20) state = 0;
-    }
-    
-    // Calculate the checkword for each block and emit the bits
-    for(int i=0; i<GROUP_LENGTH; i++) {
         uint16_t block = blocks[i];
         uint16_t check = crc(block) ^ offset_words[i];
-        for(int j=0; j<BLOCK_SIZE; j++) {
+        for(int j=0; j<BLOCK_SIZE; j++)
+        {
             buffer[bitptr/8] |= ((block & (1<<(BLOCK_SIZE-1))) != 0) << (7 - bitptr % 8);
             bitptr++;
             block <<= 1;
         }
-        for(int j=0; j<POLY_DEG; j++) {
+        for(int j=0; j<POLY_DEG; j++)
+        {
             buffer[bitptr/8] |= ((check & (1<<(POLY_DEG-1))) != 0) << (7 - bitptr % 8);
             bitptr++;
             check <<= 1;
@@ -171,11 +137,58 @@ void get_rds_group(uint8_t *buffer) {
     }
 }
 
+// write buffer with n-th group of PS
+// PS consists of 4 groups of 13 bytes each numbered 0..3
+// lower 2 bits of n define the group number
+void write_ps_group(uint8_t *buffer, uint8_t group_number)
+{
+  uint16_t blocks[GROUP_LENGTH] = {rds_params.pi, 0, 0, 0};
+  uint8_t gn = group_number & 3; // group number
+
+  blocks[1] = 0x0400 | gn;
+  if(rds_params.stereo != 0 && gn == 3)
+    blocks[1] |= 0x0004;
+  if(rds_params.ta)
+    blocks[1] |= 0x0010;
+  blocks[2] = 0xCDCD;     // no AF
+  if(gn == 0)
+  {
+    // 224..249 -> 0..25 AFs but we support max 7
+    if(rds_params.afs >= 0 && rds_params.afs < 25)
+      blocks[2] = (blocks[2] & 0x00FF) | ((rds_params.afs+224)<<8);
+  }
+  else
+  {
+    if(rds_params.af[2*gn-1] > 875)
+      blocks[2] = (blocks[2] & 0x00FF) | ((rds_params.af[2*gn-1]-875)<<8);
+  }
+  if(rds_params.af[2*gn] > 875)
+    blocks[2] = (blocks[2] & 0xFF00) | (rds_params.af[2*gn]-875);
+  blocks[3] = rds_params.ps[gn*2]<<8 | rds_params.ps[gn*2+1];
+  write_buf_crc(buffer, blocks);
+}
+
+// write buffer with n-th group of RT
+// RT consists of 16 groups of 13 bytes each numbered 0..15
+// lower 4 bits of n define the group number
+void write_rt_group(uint8_t *buffer, uint8_t group_number)
+{
+  uint16_t blocks[GROUP_LENGTH] = {rds_params.pi, 0, 0, 0};
+  uint8_t gn = group_number & 15; // group number
+
+  blocks[1] = 0x2400 | gn;
+  blocks[2] = rds_params.rt[gn*4+0]<<8 | rds_params.rt[gn*4+1];
+  blocks[3] = rds_params.rt[gn*4+2]<<8 | rds_params.rt[gn*4+3];
+
+  write_buf_crc(buffer, blocks);
+}
+
 void set_rds_pi(uint16_t pi_code) {
     rds_params.pi = pi_code;
 }
 
 void set_rds_rt(char *rt) {
+    memset(rds_params.rt, 64, 32);
     strncpy(rds_params.rt, rt, 64);
     for(int i=0; i<64; i++) {
         if(rds_params.rt[i] == 0) rds_params.rt[i] = 32;
@@ -183,6 +196,7 @@ void set_rds_rt(char *rt) {
 }
 
 void set_rds_ps(char *ps) {
+    memset(rds_params.ps, 8, 32);
     strncpy(rds_params.ps, ps, 8);
     for(int i=0; i<8; i++) {
         if(rds_params.ps[i] == 0) rds_params.ps[i] = 32;

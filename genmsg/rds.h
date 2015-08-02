@@ -35,11 +35,27 @@
 #define MSB_BIT 0x8000
 #define BLOCK_SIZE 16
 
+#define RT_LENGTH 64
+#define PS_LENGTH 8
+#define AF_LENGTH 7
+
+struct s_rds_params {
+    uint16_t pi;
+    unsigned int stereo:1;
+    unsigned int ta:1;
+    int8_t afs;
+    uint16_t af[AF_LENGTH];
+    char ps[PS_LENGTH];
+    char rt[RT_LENGTH];
+};
+extern struct s_rds_params rds_params;
 extern void get_rds_samples(float *buffer, int count);
 extern void set_rds_pi(uint16_t pi_code);
 extern void set_rds_rt(char *rt);
 extern void set_rds_ps(char *ps);
 extern void set_rds_ta(int ta);
 extern void get_rds_group(uint8_t *buffer);
+extern void write_ps_group(uint8_t *buffer, uint8_t group_number);
+extern void write_rt_group(uint8_t *buffer, uint8_t group_number);
 
 #endif /* RDS_H */

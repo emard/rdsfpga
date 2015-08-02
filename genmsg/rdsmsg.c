@@ -48,13 +48,19 @@ int main(int argc, char **argv) {
     // override cmdline option if explicitely specified
     if(options->ps_given)
       ps = options->ps_arg;
-
     if(options->rt_given)
       ngroups += 16;  // additional number of groups for RT
     rt = options->rt_arg;
     set_rds_pi(pi);
     set_rds_ps(ps);
     set_rds_rt(rt);
+    rds_params.stereo = options->stereo_given;
+    rds_params.ta = options->ta_given;
+    if(options->af_given)
+    {
+      rds_params.afs = 1;
+      rds_params.af[0] = (uint16_t)(options->af_arg * 10.0 + 0.5);
+    }
     printf("-- automatically generated with rds_msg\n");
     printf("library ieee;\n");
     printf("use ieee.std_logic_1164.all;\n");
@@ -64,20 +70,35 @@ int main(int argc, char **argv) {
     printf("package message is\n");
     printf("type rds_msg_type is array(0 to %d) of std_logic_vector(7 downto 0);\n", ngroups*13-1);
     printf("-- PI=0x%04X\n", pi);
+    printf("-- STEREO=%s\n", options->stereo_given ? "Yes" : "No");
+    printf("-- TA=%s\n", options->ta_given ? "Yes" : "No");
+    if(options->af_given)
+      printf("-- AF=%.1f MHz\n", options->af_arg);
+    else
+      printf("-- AF=No\n");
     printf("-- PS=\"%s\"\n", ps);
     if(options->rt_given)
       printf("-- RT=\"%s\"\n", rt);
     printf("constant rds_msg_map: rds_msg_type := (\n");
-    for(int i = 0; i < ngroups; i++)
+    for(int i = 0; i < 4; i++)
     {
-      get_rds_group(bit_buffer);
+      write_ps_group(bit_buffer, i);
       for(int j = 0; j < BITS_PER_GROUP/8; j++)
         printf("x\"%02x\",", bit_buffer[j]);
       printf("\n");
     }
+    if(options->rt_given)
+    {
+      for(int i = 0; i < 16; i++)
+      {
+        write_rt_group(bit_buffer, i);
+        for(int j = 0; j < BITS_PER_GROUP/8; j++)
+          printf("x\"%02x\",", bit_buffer[j]);
+        printf("\n");
+      }
+    }
     printf("others => (others => '0')\n");
     printf(");\n");
     printf("end message;\n");
-
     return EXIT_SUCCESS;
 }

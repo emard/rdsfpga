@@ -42,7 +42,7 @@ $(project): $(objects)
 
 message: $(message)
 $(message): $(project)
-	./rdsmsg -i 0xCAFE --ps="TEST1234" --rt="ABCDEFGHIJKLMNOPQRSTUVWXYZ    ABCDEFGHIJKLMNOPQRSTUVWXYZ    1234" > $@
+	./rdsmsg -i 0xCAFE --af=108 --ps="TEST1234" --rt="ABCDEFGHIJKLMNOPQRSTUVWXYZ    ABCDEFGHIJKLMNOPQRSTUVWXYZ    1234" > $@
 
 $(debianproject): $(project)
 	strip $< -o $@
