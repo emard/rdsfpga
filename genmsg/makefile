@@ -9,7 +9,7 @@ architecture=$(shell dpkg-architecture -qDEB_BUILD_ARCH)
 package=$(project)_$(version)-$(debrelease)_$(architecture).deb
 
 CLIBS= # -llockdev -lpthread -lbluetooth # -lhid
-CFLAGS=-Wall -std=gnu99 -g -Os
+CFLAGS=-Wall -std=gnu99 -g -Os # -lm
 
 debianproject=debian/usr/bin/$(project)
 # debian parts that can be erased and rebuilt
@@ -42,7 +42,7 @@ $(project): $(objects)
 
 message: $(message)
 $(message): $(project)
-	./rdsmsg -i 0xCAFE --af=108 --ps="TEST1234" --rt="ABCDEFGHIJKLMNOPQRSTUVWXYZ    ABCDEFGHIJKLMNOPQRSTUVWXYZ    1234" > $@
+	./rdsmsg -i 0xCAFE --stereo --af=107.9 --ps="TEST1234" --rt="ABCDEFGHIJKLMNOPQRSTUVWXYZ    ABCDEFGHIJKLMNOPQRSTUVWXYZ    1234" > $@
 
 $(debianproject): $(project)
 	strip $< -o $@

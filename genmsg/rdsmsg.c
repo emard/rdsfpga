@@ -54,12 +54,16 @@ int main(int argc, char **argv) {
     set_rds_pi(pi);
     set_rds_ps(ps);
     set_rds_rt(rt);
-    rds_params.stereo = options->stereo_given;
-    rds_params.ta = options->ta_given;
-    if(options->af_given)
+    rds_params.stereo = options->stereo_flag;
+    rds_params.ta = options->ta_flag;
+    for(int i, n=0; i < options->af_given; i++)
     {
-      rds_params.afs = 1;
-      rds_params.af[0] = (uint16_t)(options->af_arg * 10.0 + 0.5);
+      if(options->af_arg[i] > 87.4999 && options->af_arg[i] < 107.9001)
+      {
+        rds_params.af[n] = (int16_t)(options->af_arg[i] * 10.0 + 0.5);
+        n++;
+        rds_params.afs = n;
+      }
     }
     printf("-- automatically generated with rds_msg\n");
     printf("library ieee;\n");
@@ -72,8 +76,13 @@ int main(int argc, char **argv) {
     printf("-- PI=0x%04X\n", pi);
     printf("-- STEREO=%s\n", options->stereo_given ? "Yes" : "No");
     printf("-- TA=%s\n", options->ta_given ? "Yes" : "No");
-    if(options->af_given)
-      printf("-- AF=%.1f MHz\n", options->af_arg);
+    if(rds_params.afs)
+    {
+      printf("-- AF=");
+      for(int i = 0; i < rds_params.afs; i++)
+        printf("%.1f ", rds_params.af[i]*0.1);
+      printf("MHz\n");
+    }
     else
       printf("-- AF=No\n");
     printf("-- PS=\"%s\"\n", ps);

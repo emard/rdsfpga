@@ -19,6 +19,7 @@
     
     Modification:
     Davor Jadrijevic, deleted everything except RDS bit generator
+    Modified many things, not much of original code has left  
 */
 
 #include <stdint.h>
@@ -34,7 +35,7 @@ struct s_rds_params rds_params =
   0, // Stereo
   0, // TA
   -1, // number of AFs to follow, -1 to disable AF
-  {0,0,0,0,0,0,0}, // AFs 0..7, x0.1 MHz
+  {0,0,0,0,0,0,0}, // AFs 0..7, x0.1 MHz, e.g. 100.0 MHz is 1000
   "PS", // PS
   "RT" // RT
 };
@@ -153,17 +154,26 @@ void write_ps_group(uint8_t *buffer, uint8_t group_number)
   blocks[2] = 0xCDCD;     // no AF
   if(gn == 0)
   {
+    // write how many AFs follow at LSB position
     // 224..249 -> 0..25 AFs but we support max 7
     if(rds_params.afs >= 0 && rds_params.afs < 25)
       blocks[2] = (blocks[2] & 0x00FF) | ((rds_params.afs+224)<<8);
   }
   else
   {
-    if(rds_params.af[2*gn-1] > 875)
+    // write one of the AFs at LSB position
+    // frequency range 87.6-107.9 MHz, that's compare > 875 < 1080
+    if(rds_params.af[2*gn-1] > 875 && rds_params.af[2*gn-1] < 1080)
+    {
       blocks[2] = (blocks[2] & 0x00FF) | ((rds_params.af[2*gn-1]-875)<<8);
+    }
   }
-  if(rds_params.af[2*gn] > 875)
+  if(rds_params.af[2*gn] > 875 && rds_params.af[2*gn-1] < 1080)
+  {
+    // write one of the AFs at MSB position
+    // frequency range 87.6-107.9 MHz, that's compare > 875 < 1080
     blocks[2] = (blocks[2] & 0xFF00) | (rds_params.af[2*gn]-875);
+  }
   blocks[3] = rds_params.ps[gn*2]<<8 | rds_params.ps[gn*2+1];
   write_buf_crc(buffer, blocks);
 }

@@ -13,4 +13,4 @@ option  "ps"         d "Main display [TEXT], max 8"    string default="TEST1234"
 option  "rt"         l "Long display, max 64"          string default="ABCDEFGHIJKL" no
 option  "stereo"     s "Stereo"                        flag   off
 option  "ta"         t "Traffic Announcement"          flag   off
-option  "af"         f "AF frequency (MHz)"            float  default="100.0"      no
+option  "af"         f "AF frequency (MHz)"            float  optional multiple
