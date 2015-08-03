@@ -26,7 +26,7 @@ generic (
 port (
         clk_pcm: in std_logic; -- PCM processing clock, any (e.g. 25 MHz)
 	clk_dds: in std_logic; -- DDS clock must be >2*cw_freq (e.g. 250 MHz)
-	cw_freq: in std_logic_vector(31 downto 0);
+	cw_freq: in signed(31 downto 0);
 	pcm_in: in signed(15 downto 0); -- FM swing: pcm_in * 4Hz
 	fm_out: out std_logic
 );
@@ -37,10 +37,10 @@ architecture x of fmgen is
 
 	signal R_pcm, R_pcm_avg, R_pcm_ac: signed(15 downto 0);
 	signal R_cnt: integer;
-	signal R_dds_mul_x1, R_dds_mul_x2: std_logic_vector(31 downto 0);
-	constant C_dds_mul_y: std_logic_vector(31 downto 0) :=
-	    std_logic_vector(to_signed(integer(2.0**30 / C_fdds * 2.0**28), 32));
-	signal R_dds_mul_res: std_logic_vector(63 downto 0);
+	signal R_dds_mul_x1, R_dds_mul_x2: signed(31 downto 0);
+	constant C_dds_mul_y: signed(31 downto 0) :=
+	    to_signed(integer(2.0**30 / C_fdds * 2.0**28), 32);
+	signal R_dds_mul_res: signed(63 downto 0);
 
 begin
     R_pcm <= pcm_in;
@@ -59,7 +59,6 @@ begin
 		if R_pcm_ac > 0 then
 		    R_pcm_avg <= R_pcm_avg + 1;
 		elsif R_pcm_ac < 0 then
-		else
 		    R_pcm_avg <= R_pcm_avg - 1;
 		end if;
 	    end if;
@@ -74,8 +73,8 @@ begin
     process (clk_pcm)
     begin
 	if (rising_edge(clk_pcm)) then
-	    R_dds_mul_x1 <= cw_freq
-	                  + std_logic_vector(resize(R_pcm_ac & "00", 32)); -- "0" multiply by 4Hz
+	    R_dds_mul_x1 <= cw_freq + R_pcm_ac*4;
+--	                  + std_logic_vector(resize(R_pcm_ac & "00", 32)); -- "0" multiply by 4Hz
 	end if;
     end process;
 	
