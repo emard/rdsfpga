@@ -113,7 +113,11 @@ module main(
 
   /* transmit PCM signal to FM radio */
   wire antenna;
-  fmgen fm_tx
+  fmgen
+  #(
+    .c_fdds(250000000.0)
+  )
+  fm_tx
   (
     .clk_pcm(clk_25MHz),
     .clk_dds(clk_250MHz),
